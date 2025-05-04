@@ -1,0 +1,872 @@
+/* AIFlow Design System - CSS Variables (Dark Mode Only) */
+:root {
+  /* Dark Mode Colors */
+  --bg-primary: #111827; /* gray-950 */
+  --bg-secondary: #0F172A; /* slate-950 */
+  --surface-primary: #1F2937; /* gray-800 */
+  --surface-secondary: #111827; /* gray-900 */
+  --text-primary: #F9FAFB; /* white */
+  --text-secondary: #9CA3AF; /* gray-400 */
+  --accent-primary: #FF4500; /* orange-600 */
+  --accent-primary-hover: #E63E00; /* darker orange-700 */
+  --accent-primary-focus: #FFA500; /* lighter orange-500 */
+  --accent-secondary-blue: #3B82F6;
+  --accent-secondary-purple: #8B5CF6;
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  --border-color: #374151; /* gray-700 */
+  --input-bg: #374151; /* gray-700 */
+  --input-border: #4B5563; /* gray-600 */
+  --chart-grid-color: #374151; /* gray-700 */
+  --chart-axis-color: #9CA3AF; /* gray-400 */
+  --chart-tooltip-bg: #F9FAFB; /* white */
+  --chart-tooltip-text: #111827; /* gray-900 */
+  --chart-bar-default: #4B5563; /* gray-600 */
+
+  /* Typography */
+  --font-primary: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --text-base: 1rem;
+  --text-sm: 0.875rem;
+  --leading-relaxed: 1.625;
+  --leading-normal: 1.5;
+
+  /* Layout */
+  --container-max-width: 80rem; /* max-w-7xl */
+  --padding-section-lg: 5rem; /* py-20 */
+  --padding-section-md: 3rem; /* py-12 */
+  --padding-edge-sm: 1.5rem; /* px-6 */
+  --padding-edge-lg: 2rem; /* px-8 */
+  --gap-cards: 1.5rem; /* gap-6 */
+  --padding-card: 1.5rem; /* p-6 */
+}
+
+/* Global Styles & Typography */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-primary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  background: linear-gradient(to bottom right, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1 { font-size: 3rem; font-weight: 700; line-height: 1.2; margin-bottom: 1rem; }
+h2 { font-size: 2.25rem; font-weight: 600; line-height: 1.3; margin-bottom: 0.75rem; }
+h3 { font-size: 1.5rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.5rem; }
+
+/* Base Text & Links */
+p, span, div, label { line-height: var(--leading-relaxed); }
+.text-secondary { color: var(--text-secondary); }
+
+a, a:link, a:visited {
+  color: inherit;
+  text-decoration: none;
+  transition: text-decoration 0.2s ease-out;
+}
+a:hover { text-decoration: underline; }
+
+/* Layout */
+.dashboard-container {
+  width: 80vw;
+  max-width: 80vw;
+  margin: 0 auto;
+  padding: var(--padding-section-md) var(--padding-edge-lg);
+  padding-top: 2rem;
+  box-sizing: border-box;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Section styling */
+.daily-section,
+.monthly-section {
+  padding: var(--padding-section-md) 0;
+}
+
+/* KPIs Grid */
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--gap-cards);
+  margin-top: var(--gap-cards);
+}
+
+/* Specific layout for Daily View KPI Grid */
+.kpis-grid--daily {
+  grid-template-columns: repeat(3, 1fr); /* Explicit 3 columns */
+  align-items: stretch; /* Keep cards in same logical row aligned */
+}
+
+/* NEW: Specific layout for Dashboard View KPI Grid */
+.kpis-grid--dashboard {
+  grid-template-columns: repeat(6, 1fr); /* Explicit 6 columns */
+  align-items: stretch;
+}
+
+/* Styling for columns holding multiple cards */
+.kpi-column {
+  display: grid;
+  gap: var(--gap-cards);
+  grid-template-columns: 1fr; /* Ensure cards stack vertically */
+}
+
+/* Cards & Panels (KPI Card) */
+.kpi-card {
+  background: var(--surface-primary);
+  border-radius: 1rem;
+  padding: var(--padding-card);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.25); /* shadow-lg dark */
+  overflow: hidden;
+  text-align: center;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+/* REMOVE styles specific to double-height turnover card */
+/* .kpi-card--turnover {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+} */
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3); /* shadow-xl dark */
+  line-height: 1.3;
+}
+
+/* Card Content Styles */
+.kpi-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 300;
+}
+.kpi-value {
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+/* Style for accented KPI value */
+.kpi-value--accent {
+  color: var(--accent-primary);
+  font-weight: 700; /* Keep bold */
+}
+
+/* Buttons */
+.dashboard-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.button { /* Base button reset */
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: inherit;
+  color: inherit;
+  transition: all 0.2s ease-out;
+}
+
+.button-primary {
+  /* Make inactive state darker, like month buttons */
+  background-color: var(--surface-primary);
+  color: var(--text-secondary); /* Make text slightly dimmer for inactive */
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.button-primary:hover {
+  background-color: var(--accent-primary-hover);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.button-primary:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(255, 110, 20, 0.4); /* orange-500 alpha focus */
+}
+.button-primary.active {
+  /* Make active state bright orange, like active month */
+  background-color: var(--accent-primary); 
+  color: var(--text-primary); /* Ensure text is bright white */
+  box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* NEW: Update Button Styles */
+.button-update {
+  background: #7FFF00; /* Base Chartreuse */
+  color: #111827; /* Dark text */
+  font-weight: 600;
+  margin-left: 1.5rem;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+  /* Inherit transition from .button */
+}
+
+.button-update:hover {
+  background: #478F00; /* Darker green on hover */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Adjust Status Text Style */
+.update-status-text {
+  font-size: 0.75rem; /* Smaller font size */
+  color: var(--text-secondary); /* Light grey color */
+  /* margin-top: 4px; */ /* Removed margin-top, handled by wrapper div */
+  white-space: nowrap; /* Prevent wrapping */
+  padding-right: 5px; /* Add slight padding from the edge */
+}
+
+/* Input Styles */
+.input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  width: auto;
+  display: inline-block;
+  margin-left: 0.5rem;
+  transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent-primary-focus);
+  box-shadow: 0 0 0 3px rgba(255, 110, 20, 0.4);
+}
+
+label {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Chart Styles */
+.chart-container {
+  background: rgba(17, 24, 39, 0.5); /* bg-gray-900/50 */
+  border-radius: 0.75rem;
+  padding: var(--padding-card);
+  margin-top: var(--gap-cards);
+}
+
+/* Recharts Specific Overrides */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--chart-grid-color);
+}
+.recharts-xAxis .recharts-cartesian-axis-tick-value,
+.recharts-yAxis .recharts-cartesian-axis-tick-value {
+  fill: var(--chart-axis-color);
+  font-size: var(--text-sm);
+}
+.recharts-tooltip-wrapper {
+  border: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+.recharts-tooltip-cursor {
+   fill: var(--surface-secondary); /* Darker fill on hover */
+}
+.recharts-default-tooltip {
+  background-color: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--border-color) !important; /* Use border color */
+  border-radius: 0.375rem !important;
+  padding: 0.5rem 0.75rem !important;
+}
+.recharts-tooltip-item {
+  color: var(--chart-tooltip-text) !important;
+}
+.recharts-tooltip-item-name, .recharts-tooltip-item-separator {
+   color: var(--chart-axis-color) !important; /* Use axis color for secondary tooltip text */
+}
+
+/* Container for side-by-side charts */
+.charts-row {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
+  gap: var(--gap-cards); /* Use the same gap as KPI cards */
+  margin-top: var(--gap-cards); /* Ensure space below top row */
+}
+
+/* Ensure charts within the row take up appropriate space */
+.charts-row .chart-container {
+  flex: 1; /* Simplified: Let charts share space equally */
+  min-width: 300px; /* Prevent charts from becoming too small */
+  margin-top: 0; /* Remove individual top margin as row handles spacing or chart container does */
+}
+
+/* Adjust nested charts-row if needed (might not be necessary) */
+.chart-column-container .charts-row {
+   /* Override parent margin if needed, but gap should handle spacing */
+   /* margin-top: 0; */ 
+}
+
+/* Layout for Top Row (KPIs + Donut) */
+.top-row-layout {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  gap: var(--gap-cards);
+  margin-bottom: var(--gap-cards); /* Add space below this row before the line charts */
+  align-items: center; /* Changed from flex-start to center */
+}
+
+.kpi-grid-container {
+  flex: 3 1 60%; /* Give KPIs more space (adjust flex-basis % as needed) */
+  min-width: 450px; /* Adjust min-width based on KPI card size */
+}
+
+.donut-chart-container {
+  flex: 2 1 35%; /* Give donut chart remaining space */
+  min-width: 300px; 
+  align-self: center; /* Explicitly center this item vertically */
+}
+
+/* Ensure donut chart container itself doesn't have extra top margin */
+.donut-chart-container .chart-container {
+    margin-top: 0;
+}
+
+/* Ensure the main kpis grid doesn't have extra top margin */
+.kpi-grid-container .kpis-grid {
+    margin-top: 0;
+}
+
+/* Remove commented out old styles */
+/*
+.App, .App-logo, .App-header, .App-link, .kpis, .kpi-item {
+  display: none;
+}
+
+@keyframes App-logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+*/
+
+/* NEW Styles for Month/Year Selector */
+.month-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* Spacing between year and month controls */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.year-selector label {
+  margin-bottom: 0; /* Override default label margin */
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.year-selector .input { /* Slightly smaller dropdown */
+  padding: 0.5rem 0.75rem;
+  margin-left: 0; /* Remove default input margin */
+}
+
+.month-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap; /* Allow buttons to wrap */
+}
+
+.button-month {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem; /* rounded-md */
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background-color: var(--surface-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  min-width: 50px; /* Ensure buttons have some minimum width */
+  text-align: center;
+}
+
+.button-month:hover {
+  background-color: var(--surface-secondary);
+  border-color: var(--accent-primary-focus); /* Use lighter orange for hover border */
+  color: var(--text-primary);
+}
+
+.button-month.active {
+  background-color: var(--accent-primary);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.button-month.active:hover {
+  background-color: var(--accent-primary-hover);
+}
+
+/* NEW Styles for Daily Date Dropdown Selectors */
+.daily-date-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* Spacing between dropdowns */
+  flex-wrap: wrap;
+}
+
+.date-part-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-part-selector label {
+  margin-bottom: 0; /* Override default label margin */
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.date-part-selector .input { /* Style for dropdowns */
+  padding: 0.5rem 0.75rem;
+  margin-left: 0; /* Remove default input margin */
+  /* Adjust width if needed */
+  /* width: auto; */
+}
+
+/* NEW Styles for Yearly Grid */
+.yearly-grid-container {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto; 
+}
+
+.yearly-grid-header-row, 
+.yearly-grid-row {
+  display: flex;
+  flex-wrap: nowrap; /* Prevent wrapping within a row */
+}
+
+.yearly-grid-day-label-col {
+  flex: 0 0 25px; 
+  text-align: right;
+  padding-right: 0.5rem; 
+  font-size: 0.7rem; 
+  color: var(--text-secondary);
+  line-height: 1rem; /* Restored line height */
+  box-sizing: border-box;
+  font-weight: 700; 
+}
+
+.yearly-grid-month-header {
+  flex: 1 1 0; 
+  min-width: 1.5rem; /* Restored width */
+  text-align: center;
+  font-weight: 700; 
+  padding: 0.25rem 0; 
+  font-size: 0.7rem; 
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 0.1rem; 
+  box-sizing: border-box;
+  overflow: hidden; /* Hide overflow if text is too long */
+  text-overflow: ellipsis; /* Add ellipsis */
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+.yearly-grid-cell {
+  flex: 1 1 0; 
+  min-width: 1.5rem; /* Restored width */
+  height: 1rem; /* Restored height */
+  border-radius: 0.25rem; /* Restored radius */
+  margin: 1px; /* Restored margin */
+  box-sizing: border-box;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+  /* Add flex properties to center content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yearly-grid-cell:hover {
+  transform: scale(1.2); /* Slightly larger scale for smaller circles */
+  box-shadow: 0 0 0 1px var(--accent-primary); /* Thinner border */
+  z-index: 10; 
+}
+
+.yearly-grid-cell.invalid {
+  /* Keep specific styling for invalid if needed, but empty handles visibility */
+}
+
+/* Make empty cells (zero turnover or invalid date) invisible and non-interactive */
+.yearly-grid-cell.empty {
+  background-color: transparent !important;
+  pointer-events: none; /* Disable hover effects/tooltip */
+  box-shadow: none !important; /* Ensure no hover box-shadow */
+}
+
+/* Styles for the value text inside the cell */
+.yearly-grid-cell-value {
+  font-size: 0.6rem; /* Very small font */
+  font-weight: 500;
+  color: var(--bg-secondary); /* Dark blue/slate background color */
+  line-height: 1; /* Tight line height */
+  display: block; /* Ensure it takes space */
+  text-align: center;
+  width: 100%;
+  overflow: hidden; /* Hide overflow */
+  white-space: nowrap;
+  /* Mix-blend-mode could be used for better contrast, but browser support varies */
+  /* mix-blend-mode: difference; */ 
+}
+
+/* Optional: Adjust text color based on background brightness (difficult with gradient) */
+/* Example: If background is dark orange, make text lighter? Requires JS or more complex CSS */
+
+/* NEW Styles for Yearly Summary Rows */
+.yearly-summary-row {
+  display: flex; 
+  align-items: baseline; 
+  margin-top: 0.25rem; 
+  border-top: 1px solid var(--border-color); 
+  padding-top: 0.25rem; 
+  /* Re-add padding-left ONLY if labels are present */
+  /* padding-left: 25px; */ 
+  box-sizing: border-box; 
+}
+
+.yearly-summary-label {
+  /* Existing label styles */
+  flex: 0 0 25px; 
+  text-align: right;
+  padding-right: 0.5rem; 
+  font-size: 0.7rem; 
+  color: var(--text-secondary);
+  line-height: 1rem; 
+  font-weight: 700;
+  margin-right: 0; 
+  box-sizing: border-box;
+}
+
+.yearly-summary-values-container {
+  display: flex; 
+  flex: 1; 
+  box-sizing: border-box;
+}
+
+.yearly-summary-value {
+  min-width: 1.5rem; 
+  flex: 1 1 0; 
+  text-align: center;
+  font-size: 0.7rem; 
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 1px; 
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========= Yearly View Specific Styles ========= */
+
+/* REMOVE Old Layout Styles */
+/* .yearly-layout-container { ... } */
+/* .yearly-grid-and-summary-container { ... } */
+/* .yearly-kpi-column { ... } */
+
+/* NEW: Top row layout for KPIs + Donut (similar to monthly/daily) */
+.yearly-top-row-container {
+  display: flex;
+  flex-wrap: wrap; /* Allow wrapping */
+  gap: var(--gap-cards);
+  margin-bottom: var(--gap-cards); /* Space below this row before the grid */
+  align-items: center; /* Vertically center items */
+}
+
+/* Apply flex sizing similar to monthly/daily top row */
+.yearly-top-row-container .kpi-grid-container {
+  flex: 3 1 60%; 
+  min-width: 450px; 
+}
+
+.yearly-top-row-container .donut-chart-container {
+  flex: 2 1 35%; 
+  min-width: 300px; 
+  align-self: center; 
+}
+
+/* Ensure donut chart container itself doesn't have extra top margin */
+.yearly-top-row-container .donut-chart-container .chart-container {
+    margin-top: 0;
+}
+
+/* Specific grid setup for the 3 yearly KPIs */
+.kpis-grid--yearly {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+  gap: var(--gap-cards);
+  /* Remove margin-top if kpi-grid-container handles spacing */
+  /* margin-top: 0; */ 
+}
+
+/* Ensure the main kpis grid inside the container doesn't have extra top margin */
+.yearly-top-row-container .kpi-grid-container .kpis-grid {
+    margin-top: 0;
+}
+
+/* Yearly grid container is now a direct child */
+.yearly-grid-container {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto; 
+}
+
+/* Yearly summary section is now a direct child */
+.yearly-summary-section {
+  /* Adjust margin-top if needed */
+}
+
+/* Ensure yearly summary row still has its top border and padding */
+.yearly-summary-row {
+  display: flex; 
+  align-items: baseline; 
+  margin-top: 0.25rem; 
+  border-top: 1px solid var(--border-color); 
+  padding-top: 0.25rem; 
+  /* Re-add padding-left ONLY if labels are present */
+  /* padding-left: 25px; */ 
+  box-sizing: border-box; 
+}
+
+.yearly-summary-label {
+  /* Existing label styles */
+  flex: 0 0 25px; 
+  text-align: right;
+  padding-right: 0.5rem; 
+  font-size: 0.7rem; 
+  color: var(--text-secondary);
+  line-height: 1rem; 
+  font-weight: 700;
+  margin-right: 0; 
+  box-sizing: border-box;
+}
+
+.yearly-summary-values-container {
+  display: flex; 
+  flex: 1; 
+  box-sizing: border-box;
+}
+
+.yearly-summary-value {
+  min-width: 1.5rem; 
+  flex: 1 1 0; 
+  text-align: center;
+  font-size: 0.7rem; 
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 1px; 
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* NEW: Container for Yearly Chart + KPIs */
+.yearly-chart-and-kpis-container {
+  display: flex;
+  flex-wrap: nowrap; /* Force items onto one line */
+  gap: var(--gap-cards);
+  margin-top: var(--gap-cards); /* Add space above this combined section */
+  align-items: stretch; /* Stretch items to fill height */
+}
+
+/* Adjust chart container within the new layout */
+.yearly-performance-chart-container {
+  flex: 3 1 70%; /* Give chart more space */
+  min-width: 400px; 
+  margin-top: 0; /* Remove margin as parent container handles it */
+}
+
+/* NEW: Styling for the KPI column next to the chart */
+.yearly-chart-kpi-column {
+  flex: 1 1 25%; /* Take remaining space */
+  min-width: 180px; /* Minimum width for KPIs */
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-cards); 
+  justify-content: center; /* Center cards vertically if they dont fill height */
+}
+
+/* Ensure KPI cards within this column take full width */
+.yearly-chart-kpi-column .kpi-card {
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width */
+}
+
+/* === Stock Bubble Grid === */
+.stock-bubble-grid-container {
+  width: 100%; /* Use full width */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-y: hidden; /* Hide vertical scrollbar */
+  padding: 1rem 0;
+}
+
+/* NEW: Header row for day labels */
+.stock-bubble-grid-header-row {
+  display: flex;
+  margin-bottom: 0.25rem; /* Space below headers */
+  /* Removed Spacer */
+}
+
+/* Styling for day headers */
+.stock-bubble-grid-day-header {
+  flex: 1 1 0; /* Allow flexible width, distribute space equally */
+  /* min-width: 30px; */ /* REMOVED Minimum width */
+  text-align: center; /* Ensure text is centered */
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.25rem 0; /* Keep vertical padding, remove horizontal */
+}
+
+.stock-bubble-grid {
+  display: grid;
+  grid-template-columns: repeat(31, minmax(0, 1fr)); /* Allow columns to shrink to fit */
+  grid-template-rows: minmax(145px, auto); /* Updated row height to match SVG */
+  gap: 2px; /* Smaller gap */
+  padding: 0.5rem;
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  /* Removed align-items and fixed height */
+}
+
+.stock-bubble-grid-cell {
+  position: relative;
+  /* REMOVED min-width */
+  height: 145px; /* Updated height to match SVG */
+  background-color: var(--bg-tertiary);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Hide parts of circles that overflow */
+}
+
+/* NEW: Make invalid date cells visually distinct */
+.stock-bubble-grid-cell.invalid {
+  background-color: transparent; /* Invisible background */
+  pointer-events: none; /* Not interactive */
+}
+
+/* Removed .stock-bubble-grid-day-label as it's now in its own column */
+
+.stock-bubble-grid-cell svg {
+  display: block;
+  position: absolute;
+  /* Center SVG - Use transform in JSX now */
+  /* top: 0; 
+     left: 0; */
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* NEW: Styles for Stock Chart Legend */
+.stock-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem; /* Space between legend items */
+  margin-top: 1rem; /* Space above the legend */
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.stock-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* Space between swatch and text */
+}
+
+.stock-legend-color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px; /* Slightly rounded corners */
+  border: 1px solid var(--border-color); /* Optional border */
+}
+
+/* --- Custom Alert Styles --- */
+.custom-alert {
+  position: fixed; /* Or absolute if dashboard-container is relative */
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: 8px;
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1000; /* Ensure it's on top */
+  min-width: 300px;
+  max-width: 90%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+/* Different types */
+.alert-info {
+  background-color: var(--accent-secondary-blue); /* Blue for info */
+}
+.alert-success {
+  background-color: var(--status-success); /* Green for success */
+}
+.alert-error {
+  background-color: var(--status-error); /* Red for error */
+}
+
+.alert-close-button {
+  background: none;
+  border: none;
+  color: inherit; /* Use parent text color */
+  font-size: 1.4rem;
+  line-height: 1;
+  margin-left: 15px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease-out;
+}
+
+.alert-close-button:hover {
+  opacity: 1;
+}
+
+/* Force small font for axis ticks in dashboard rolling window bar chart */
+.dashboard-view-section .recharts-cartesian-axis-tick-value {
+  font-size: 10px !important;
+}
+
+/* Reduce vertical space under KPI cards in dashboard view */
+.dashboard-view-section .kpis-grid--dashboard {
+  margin-bottom: 0.5rem !important;
+}
