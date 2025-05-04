@@ -1,0 +1,6 @@
+# Ignore virtual environment and environment file
+venv/
+.env 
+# React frontend dependencies
+frontend/node_modules/
+frontend/build/ 
