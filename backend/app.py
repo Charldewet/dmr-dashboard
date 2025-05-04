@@ -2,7 +2,7 @@
 import os
 import sys
 import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import func
 import datetime as _dt
@@ -14,7 +14,11 @@ from main import fetch_latest_report, get_today_entries, get_month_to_date_entri
 
 print(f"--- BACKEND DEBUG: Using DATABASE_URL: {DATABASE_URL} ---")
 
-app = Flask(__name__)
+# Calculate the path to the frontend build directory relative to this file
+frontend_build_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../frontend/build'))
+
+# Initialize Flask app pointing to the correct static folder
+app = Flask(__name__, static_folder=frontend_build_path, static_url_path='/')
 CORS(app)
 
 @app.route('/api/today', methods=['GET'])
@@ -1007,6 +1011,20 @@ def api_fetch_reports():
         # Return the count even on error? Or just error? Let's just return error.
         return jsonify({'error': str(e)}), 500
 
+# --- Add this code to serve the React App ---
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        # Serve specific files like CSS, JS, images if they exist
+        return send_from_directory(app.static_folder, path)
+    else:
+        # Serve index.html for the root or any unknown path (React Router handles routing)
+        return send_from_directory(app.static_folder, 'index.html')
+
+# Make sure your __main__ block is suitable for production
 if __name__ == '__main__':
-    # Hardcode port to 5001
-    app.run(host='0.0.0.0', port=5001) 
+   # Use 0.0.0.0 to be accessible externally (like on Render)
+   # Get port from environment variable PORT, default to 5001 if not set
+   port = int(os.environ.get('PORT', 5001))
+   app.run(host='0.0.0.0', port=port) 
