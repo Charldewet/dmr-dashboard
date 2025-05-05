@@ -502,17 +502,16 @@ function App() {
 
     const abortController = new AbortController();
     const signal = abortController.signal;
-    const backendUrl = 'http://localhost:5001'; 
 
     const processYearlyView = async () => {
       console.log(`Processing Yearly/Dasboard View for ${selectedYear}`);
       try {
         // Fetch daily turnover and aggregates as before, and stock movements for both years
         const [dailyTurnoverRes, aggregatesRes, dailyStockMovementsRes, prevYearStockMovementsRes] = await Promise.all([
-            axios.get(`${backendUrl}/api/year/${selectedYear}/daily_turnover`, { signal }),
-            axios.get(`${backendUrl}/api/year/${selectedYear}/aggregates`, { signal }),
-            axios.get(`${backendUrl}/api/year/${selectedYear}/daily_stock_movements`, { signal }),
-            axios.get(`${backendUrl}/api/year/${selectedYear - 1}/daily_stock_movements`, { signal }),
+            axios.get(`/api/year/${selectedYear}/daily_turnover`, { signal }),
+            axios.get(`/api/year/${selectedYear}/aggregates`, { signal }),
+            axios.get(`/api/year/${selectedYear}/daily_stock_movements`, { signal }),
+            axios.get(`/api/year/${selectedYear - 1}/daily_stock_movements`, { signal }),
         ]);
 
         // --- NEW: Fetch avg basket value for each month in both years ---
