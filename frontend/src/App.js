@@ -9,6 +9,9 @@ import {
 } from 'recharts';
 import { getDaysInMonth, addMonths, format } from 'date-fns';
 
+// --- Axios configuration for credentials ---
+axios.defaults.withCredentials = true; // Send cookies with requests
+
 // Helper function to get CSS variable value
 const getCssVar = (varName) => getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 
@@ -172,21 +175,30 @@ function InfoIcon() {
 }
 
 function App() {
-  // UI state
-  // --- Calculate previous month's year and month number ---
+  // --- Calculate initial date values ---
   const today = new Date();
-  const currentMonthDate = new Date(today.getFullYear(), today.getMonth(), 1); // Start of current month
-  const prevMonthDate = new Date(currentMonthDate.setMonth(currentMonthDate.getMonth() - 1));
+  const currentMonthDate = new Date(today.getFullYear(), today.getMonth(), 1); 
+  const prevMonthDate = new Date(new Date().setMonth(today.getMonth() - 1)); // Simpler way to get prev month
   const initialYear = prevMonthDate.getFullYear();
   const initialMonthNum = prevMonthDate.getMonth() + 1; // 1-12
-  const currentYear = today.getFullYear(); // Re-add currentYear
-  // --- End calculation ---
-  
-  // ** Set default view to 'dashboard' **
-  const [view, setView] = useState('dashboard'); // Changed initial view
+  const currentYear = today.getFullYear();
+
+  // --- Login State ---
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true); // Added loading state
+  // --- State variables for pharmacy restrictions ---
+  const [allowedPharmacies, setAllowedPharmacies] = useState([]);
+  const [isRestrictedUser, setIsRestrictedUser] = useState(false);
+
+  // --- Existing UI and Data State ---
+  const [view, setView] = useState('dashboard');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedYear, setSelectedYear] = useState(initialYear);
-  const [month, setMonth] = useState(initialMonthNum); // Store month number (1-12)
+  const [selectedYear, setSelectedYear] = useState(initialYear); // Now defined
+  const [month, setMonth] = useState(initialMonthNum); // Now defined
   
   // Chart colors are now fixed based on dark mode CSS variables
   const [chartColors, setChartColors] = useState({ primary: '#FFA500', secondary: '#4B5563', selected: '#FF4500' });
@@ -237,6 +249,24 @@ function App() {
   // State for previous year's summary data
   const [previousYearlySummaryData, setPreviousYearlySummaryData] = useState([]);
 
+  // --- Pharmacy Selector State ---
+  const PHARMACY_OPTIONS = [
+    { label: 'TLC Reitz', value: 'reitz' },
+    { label: 'TLC Villiers', value: 'villiers' },
+    { label: 'TLC Roos', value: 'roos' },
+    { label: 'TLC Tugela', value: 'tugela' },
+    { label: 'TLC Winterton', value: 'winterton' },
+  ];
+  const [selectedPharmacy, setSelectedPharmacy] = useState(PHARMACY_OPTIONS[0].value);
+
+  // After 'const [selectedPharmacy, setSelectedPharmacy] = useState(PHARMACY_OPTIONS[0].value);'
+  const selectedPharmacyLabel = PHARMACY_OPTIONS.find(opt => opt.value === selectedPharmacy)?.label || '';
+
+  // Attach selected pharmacy to all axios requests as a header
+  useEffect(() => {
+    axios.defaults.headers.common['X-Pharmacy'] = selectedPharmacy;
+  }, [selectedPharmacy]);
+
   // --- Fetch Inventory History Data from new endpoint ---
   useEffect(() => {
     if (view !== 'stock') {
@@ -282,7 +312,7 @@ function App() {
         setInventoryTurnoverHistory([]);
       });
 
-  }, [view, selectedYear, month]);
+  }, [view, selectedYear, month, selectedPharmacy]);
 
   // Update chart colors based on CSS variables (run once on mount)
   useEffect(() => {
@@ -331,7 +361,7 @@ function App() {
     };
 
     fetchDataForSelectedDate();
-  }, [view, selectedDate]); // Only depend on view and selectedDate
+  }, [view, selectedDate, selectedPharmacy]); // Only depend on view and selectedDate
 
   // --- Fetch monthly data for MONTHLY view ---
   useEffect(() => {
@@ -360,7 +390,7 @@ function App() {
            setMonthlyData([]); 
         });
 
-  }, [view, month, selectedYear]); // Keep dependencies for monthly view
+  }, [view, month, selectedYear, selectedPharmacy]); // Keep dependencies for monthly view
 
   // --- Fetch monthly aggregates for DASHBOARD view ---
   useEffect(() => {
@@ -384,7 +414,7 @@ function App() {
     axios.get(`/api/year/${year - 1}/monthly_summaries`)
       .then(res => setPreviousYearlySummaryData(res.data || []))
       .catch(() => setPreviousYearlySummaryData([]));
-  }, [view, selectedYear, month]);
+  }, [view, selectedYear, month, selectedPharmacy]);
 
   // --- Compute KPIs from dailyData (no change needed) ---
   useEffect(() => {
@@ -420,7 +450,7 @@ function App() {
       }
     });
     setTodayKPIs(k);
-  }, [dailyData]);
+  }, [dailyData, selectedPharmacy]);
 
   // Fetch YEARLY stock movements data AND Stock vs Sales data
   useEffect(() => {
@@ -447,7 +477,7 @@ function App() {
         setMonthlyStockSalesData([]); // Reset on error
       });
 
-  }, [view, selectedYear]); // Trigger on view change to stock or year change
+  }, [view, selectedYear, selectedPharmacy]); // Trigger on view change to stock or year change
 
   // ** Update useEffect for yearly data - Revert to FE calculation **
   useEffect(() => {
@@ -613,7 +643,7 @@ function App() {
       console.log(`Cleaning up yearly effect for ${selectedYear}...`);
       abortController.abort();
     };
-  }, [view, selectedYear]);
+  }, [view, selectedYear, selectedPharmacy]);
 
   // Format currency
   const formatCurrency = (value) => value?.toLocaleString('en-ZA', { style: 'currency', currency: 'ZAR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -860,7 +890,7 @@ function App() {
         console.error("Error fetching latest date:", err);
         setLatestDataDate('Error'); // Indicate error fetching date
       });
-  }, []); // Run only once on mount
+  }, [selectedPharmacy]); // Run only once on mount
 
   // --- Fetch Stock KPIs AND Monthly Aggregates for STOCK view ---
   useEffect(() => {
@@ -893,7 +923,7 @@ function App() {
         setMonthlyAgg({}); // Clear on error
       });
       
-  }, [view, month, selectedYear]); // Depend on stock view, month, year
+  }, [view, month, selectedYear, selectedPharmacy]); // Depend on stock view, month, year
 
   // --- Fetch YEARLY stock movements data AND Stock vs Sales data (for Stock view charts) ---
   useEffect(() => {
@@ -901,7 +931,7 @@ function App() {
 
     // ... (existing logic for fetching yearly stock movements and monthly stock sales) ...
 
-  }, [view, selectedYear]); // Trigger on view change to stock or year change
+  }, [view, selectedYear, selectedPharmacy]); // Trigger on view change to stock or year change
 
   // --- Helper: Generate last 12 (year, month) pairs ending with selected year/month ---
   function getLast12Months(year, month) {
@@ -945,7 +975,7 @@ function App() {
         }))
       );
     });
-  }, [view, selectedYear, month]);
+  }, [view, selectedYear, month, selectedPharmacy]);
 
   // --- Helper: Build 12-month rolling window for cost of sales and purchases ---
   const dashboardRolling12MonthsCostOfSales = (() => {
@@ -1181,8 +1211,260 @@ function App() {
         console.error("Error fetching monthly turnover data for dashboard view:", error);
         setMonthlyData([]);
       });
-  }, [view, selectedYear, month]);
+  }, [view, selectedYear, month, selectedPharmacy]);
 
+  // --- Check Authentication Status on Load ---
+    // --- Check Authentication Status on Load ---
+  useEffect(() => {
+    setIsLoadingAuth(true);
+    axios.get('/api/check_auth') // Use relative path if proxy is set
+      .then(res => {
+        if (res.data.isLoggedIn) {
+          const loggedInUsername = res.data.username;
+          const allowed = res.data.allowed_pharmacies || [];
+          console.log("Auth Check Response:", res.data); // Log response
+
+          setIsLoggedIn(true);
+          setCurrentUser(loggedInUsername);
+          setAllowedPharmacies(allowed);
+
+          // --- UPDATED: Explicitly check username for restriction ---
+          if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+            console.log(`User ${loggedInUsername} identified as restricted.`);
+            // Set restriction *first*
+            setIsRestrictedUser(true);
+            // Then force the pharmacy selection if appropriate
+            if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 console.log(`Forcing pharmacy to 'villiers' for restricted user ${loggedInUsername}.`);
+                 setSelectedPharmacy('villiers');
+            } else {
+                // Handle edge case: restricted user has unexpected allowed list
+                console.warn(`User ${loggedInUsername} is restricted but allowed list is not just ['villiers']:`, allowed);
+                const currentSelection = selectedPharmacy; // Capture current selection before potential change
+                const fallback = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                if (!allowed.includes(currentSelection)) {
+                    console.log(`Current selection ${currentSelection} invalid for restricted user ${loggedInUsername}. Resetting to ${fallback}`);
+                    setSelectedPharmacy(fallback);
+                } else {
+                     console.log(`Keeping valid pharmacy ${currentSelection} for restricted user ${loggedInUsername}`);
+                }
+            }
+          } else {
+            // User is Charl, Anmarie, or potentially others - NOT restricted
+            console.log(`User ${loggedInUsername} identified as unrestricted.`);
+             // Set restriction *first*
+            setIsRestrictedUser(false);
+            const currentSelection = selectedPharmacy; // Capture current selection
+            const defaultPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+            // Check if current selection is valid for unrestricted user after setting state
+            if ((allowed.length > 0 && !allowed.includes(currentSelection)) || (allowed.length === 0 && loggedInUsername)) {
+                 console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultPharmacy}`);
+                 setSelectedPharmacy(defaultPharmacy);
+            } else {
+                 console.log(`Keeping valid pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+            }
+          }
+          // --- End UPDATED ---
+
+        } else {
+          // User is not logged in
+          console.log("Auth Check Response: Not Logged In");
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setAllowedPharmacies([]); // Clear restrictions on logout
+          setIsRestrictedUser(false);
+          // Optionally reset pharmacy selection on logout?
+          // setSelectedPharmacy(PHARMACY_OPTIONS[0].value);
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+        setIsLoggedIn(false); // Assume not logged in on error
+        setCurrentUser(null);
+        setAllowedPharmacies([]); // Clear restrictions on error
+        setIsRestrictedUser(false);
+      })
+      .finally(() => {
+        setIsLoadingAuth(false); // Finished loading auth status
+      });
+  // Dependency array is empty: run only once on mount
+  }, []);
+
+  // --- Login/Logout Handlers ---
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError(''); // Clear previous errors
+    setIsLoadingAuth(true); // Show loading indicator during login process
+    try {
+      const loginResponse = await axios.post('/api/login', { 
+          username: loginUsername, 
+          password: loginPassword 
+      });
+
+      if (loginResponse.status === 200) {
+        // Login successful, now immediately fetch auth details
+        console.log("Login POST successful. Fetching auth details...");
+        try {
+          const authResponse = await axios.get('/api/check_auth');
+          console.log("Auth Check Response (after login):", authResponse.data);
+
+          if (authResponse.data && authResponse.data.isLoggedIn) {
+            const loggedInUsername = authResponse.data.username;
+            const allowed = authResponse.data.allowed_pharmacies || [];
+            
+            // Set all states together AFTER getting auth info
+            setAllowedPharmacies(allowed);
+            setCurrentUser(loggedInUsername);
+            
+            // Determine restriction and set related state
+            let restrictUser = false;
+            let defaultRestrictedPharmacy = null;
+
+            // --- ADJUSTMENT: Only Mauritz/Elani are strictly 'restricted' (dropdown disabled) ---
+            if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+              console.log(`User ${loggedInUsername} identified as strictly restricted (dropdown disabled).`);
+              restrictUser = true;
+              if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 defaultRestrictedPharmacy = 'villiers';
+              } else {
+                 console.warn(`Mauritz/Elani allowed list != ['villiers']:`, allowed);
+                 defaultRestrictedPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value; // Fallback
+              }
+            } else {
+              // Lize, Charl, Anmarie, etc. are not strictly restricted (dropdown enabled)
+              console.log(`User ${loggedInUsername} identified as not strictly restricted (dropdown enabled).`);
+              restrictUser = false;
+            }
+            // --- End ADJUSTMENT ---
+
+            // Set restriction state (only true for Mauritz/Elani now)
+            setIsRestrictedUser(restrictUser);
+
+            // Set selected pharmacy based on restriction
+            if (restrictUser) {
+                console.log(`Setting pharmacy to ${defaultRestrictedPharmacy} for restricted user ${loggedInUsername}.`);
+                setSelectedPharmacy(defaultRestrictedPharmacy);
+            } else {
+                 // Ensure selected pharmacy is valid for unrestricted user
+                 const currentSelection = selectedPharmacy; // Capture current selection
+                 const defaultUnrestricted = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                 if (!allowed.includes(currentSelection) && allowed.length > 0) { // Check allowed length > 0
+                    console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultUnrestricted}`);
+                    setSelectedPharmacy(defaultUnrestricted);
+                 } else {
+                     console.log(`Keeping pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+                 }
+            }
+
+            // Finally, set loggedIn and clear form
+            setIsLoggedIn(true); 
+            setLoginUsername('');
+            setLoginPassword('');
+
+          } else {
+             // This case should ideally not happen if login succeeded, but handle it defensively
+             console.error("Login succeeded but check_auth failed or reported not logged in.");
+             setLoginError('Login verification failed. Please try again.');
+             setIsLoggedIn(false);
+             setCurrentUser(null);
+             setAllowedPharmacies([]);
+             setIsRestrictedUser(false);
+          }
+        } catch (authError) {
+           console.error("Failed to fetch auth details after login:", authError);
+           setLoginError('Login verification failed. Please try again.');
+           setIsLoggedIn(false);
+           setCurrentUser(null);
+           setAllowedPharmacies([]);
+           setIsRestrictedUser(false);
+        }
+      } 
+      // No explicit else needed for loginResponse.status != 200, as axios throws for non-2xx
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setAllowedPharmacies([]); // Clear restrictions on login fail
+      setIsRestrictedUser(false);
+      if (error.response && error.response.data && error.response.data.error) {
+        setLoginError(error.response.data.error);
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    } finally {
+        setIsLoadingAuth(false); // Hide loading indicator
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      // Reset view or other state if needed
+      setView('dashboard'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Handle logout error if needed (e.g., show message)
+    }
+  };
+
+  // --- Existing Helper Functions & Data Preparation ---
+  // ... (formatCurrency, donut data, rolling window helpers, etc.)
+
+  // --- Conditional Rendering --- 
+
+  // Show loading indicator while checking auth status
+  if (isLoadingAuth) {
+    return <div className="loading-container">Checking authentication...</div>; 
+  }
+
+  if (!isLoggedIn) {
+    // --- Render TLC Brand Login Card with image background ---
+    return (
+      <div className="session">
+        <div className="login-center-wrapper">
+          <form className="log-in" autoComplete="off" onSubmit={e => { e.preventDefault(); handleLoginSubmit(e); }}>
+            <div className="login-welcome">
+              <div className="login-title-main">Welcome back</div>
+              <div className="login-title-sub">Login to view the dashboard</div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input 
+                placeholder="Username" 
+                type="text" 
+                name="username" 
+                id="username" 
+                autoComplete="off"
+                value={loginUsername}
+                onChange={e => setLoginUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input 
+                placeholder="Password" 
+                type="password" 
+                name="password" 
+                id="password" 
+                autoComplete="off"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="button login-button">Log in</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Render Main Dashboard (Only if logged in) --- 
   return (
     <div className="dashboard-container">
       {/* --- Custom Alert Box --- */}
@@ -1200,53 +1482,82 @@ function App() {
       {/* --- End Custom Alert Box --- */}
 
       <header className="dashboard-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
+         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* ... logo and title ... */}
+           <img 
             src="/the-local-choice-logo.png" 
             alt="TLC Logo" 
             style={{ height: '60px' }}
           />
-          <h2>TLC Reitz</h2>
-        </div>
-        <nav className="dashboard-nav">
-          {/* NEW: Dashboard Button */}
-          <button
-            onClick={() => setView('dashboard')}
-            className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
-            Dashboard 
-          </button>
-          {/* Removed Daily button */}
-          <button
-            onClick={() => setView('monthly')}
-            className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
-            Monthly
-          </button>
-          <button
-            onClick={() => setView('yearly')}
-            className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
-            Yearly
-          </button>
-          {/* NEW: Stock View Button */}
-          <button
-            onClick={() => setView('stock')}
-            className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
-            Stock
-          </button>
-          {/* Container for Update Button only */}
-          <div className="update-button-container">
-            <button
-              onClick={handleUpdateClick}
-              className="button button-update" 
+          {/* Find the label for the selected pharmacy */}
+          <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
+         </div>
+         <nav className="dashboard-nav">
+         <select
+              value={selectedPharmacy}
+              onChange={e => setSelectedPharmacy(e.target.value)}
+              disabled={isRestrictedUser} // Disable if user is restricted
+              style={{
+                marginRight: '0.75rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                background: '#232b3b',
+                color: '#fff',
+                border: '1px solid #374151',
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer', // Change cursor style when disabled
+                opacity: isRestrictedUser ? 0.6 : 1 // Visually dim the dropdown when disabled
+              }}
             >
-              Update
+              {/* 
+                --- ADJUSTMENT: Always filter options based on allowedPharmacies if available ---
+                Filter options:
+                - If allowedPharmacies state is populated, show only those options.
+                - Otherwise (e.g., before auth check completes), show all options.
+                The 'disabled' attribute separately handles disabling the dropdown for Mauritz/Elani.
+              */}
+              {(allowedPharmacies.length > 0
+                ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
+                : PHARMACY_OPTIONS
+              ).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+                onClick={() => setView('dashboard')}
+                className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
+                Dashboard 
             </button>
-            {/* REMOVED Status Text Span from here 
-            <span className="update-status-text">
-              Updated to: {latestDataDate}
-            </span>
-            */}
-          </div>
-        </nav>
+            <button
+                onClick={() => setView('monthly')}
+                className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
+                Monthly
+            </button>
+            <button
+                onClick={() => setView('yearly')}
+                className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
+                Yearly
+            </button>
+            <button
+                onClick={() => setView('stock')}
+                className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
+                Stock
+            </button>
+            <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleUpdateClick} // Assuming handleUpdateClick is defined elsewhere
+                className="button button-update" 
+              >
+                Update
+              </button>
+              <button
+                onClick={handleLogout}
+                className="button button-primary button-logout" 
+              >
+                Logout ({currentUser})
+              </button>
+            </div>
+         </nav>
       </header>
 
       {/* NEW: Status Text Positioned Below Header */}

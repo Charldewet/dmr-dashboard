@@ -870,3 +870,305 @@ label {
 .dashboard-view-section .kpis-grid--dashboard {
   margin-bottom: 0.5rem !important;
 }
+
+/* --- Login Page Card with Overlay on Image --- */
+.login-bg {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, var(--bg-primary), var(--bg-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: url('login.png') center center / cover no-repeat;
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25);
+  overflow: hidden;
+  max-width: 900px;
+  width: 90vw;
+  min-height: 420px;
+}
+
+.login-card-overlay {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  padding: 3rem 2.5rem;
+  background: rgba(18, 22, 34, 0.78); /* semi-transparent dark */
+  border-radius: 2rem 0 0 2rem;
+  min-width: 350px;
+  max-width: 400px;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.18);
+  backdrop-filter: blur(4px);
+}
+
+.login-box {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 350px;
+}
+
+.login-box img {
+  margin-bottom: 1.5rem;
+}
+
+.login-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2rem;
+  text-align: left;
+  width: 100%;
+}
+
+.input-group label {
+  color: #e2e8f0;
+}
+.input-group .input {
+  background: #232b3b;
+  color: #fff;
+  border: 1px solid #374151;
+}
+.login-button {
+  background: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: none;
+  margin-top: 1rem;
+  transition: background 0.2s;
+}
+.login-button:hover {
+  background: var(--accent-primary-hover);
+}
+
+@media (max-width: 900px) {
+  .login-card {
+    min-height: 0;
+    max-width: 98vw;
+    border-radius: 2rem;
+    justify-content: center;
+  }
+  .login-card-overlay {
+    border-radius: 2rem;
+    min-width: 0;
+    max-width: 100vw;
+    width: 100%;
+    padding: 2rem 1.2rem;
+    align-items: center;
+  }
+}
+
+/* --- Loading Styles --- */
+.loading-container {
+  /* ... styles ... */
+}
+
+/* --- Logout Button Styles --- */
+.button-logout {
+  background-color: #E53E3E !important; /* Red base color (Tailwind red-600) - Use !important to override .button-primary */
+  border-color: #E53E3E !important; /* Match background */
+  color: white;
+}
+
+.button-logout:hover {
+  background-color: #C53030 !important; /* Darker red on hover (Tailwind red-700) */
+  border-color: #C53030 !important; /* Match background */
+}
+
+/* Ensure base button styles are applied */
+/* ... potentially add other styles from .button if needed ... */
+
+/* TLC Login Card Layout */
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', Helvetica, Arial, sans-serif;
+  font-weight: 300;
+  margin: 0;
+}
+html, body {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  background: linear-gradient(to bottom right, #111827, #0F172A);
+}
+.session {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  min-width: 340px;
+  min-height: 480px;
+  margin: 5vh auto;
+  background: url('login.png') center center / cover no-repeat #232b3b;
+  border-radius: 1.5rem;
+  box-shadow: 0px 2px 16px 0 rgba(0,0,0,.18);
+  overflow: hidden;
+  position: relative;
+}
+.log-in {
+  background: none;
+  margin: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 260px;
+  min-width: 120px;
+  color: #fff;
+  padding: 48px 32px 32px 48px;
+  z-index: 2;
+}
+.session img.tlc-logo {
+  height: 48px;
+  margin: 48px 0 24px 48px;
+  filter: drop-shadow(0 2px 8px #0008);
+  z-index: 2;
+}
+@media (max-width: 700px) {
+  .session {
+    min-width: 0;
+    max-width: 98vw;
+    border-radius: 1.5rem;
+    padding: 0;
+    background-position: center top;
+  }
+  .log-in {
+    width: 100%;
+    min-width: 0;
+    padding: 24px 8px 12px 8px;
+    align-items: center;
+  }
+  .session img.tlc-logo {
+    margin: 24px auto 16px auto;
+    display: block;
+  }
+}
+
+.floating-label input {
+  font-size: 14px;
+  padding: 10px 0px 10px 38px;
+  height: 36px;
+  border-radius: 18px;
+  background: rgba(35,43,59,0.35); /* transparent fill */
+  border: 1.5px solid #374151;
+  box-shadow: none;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  transition: border-color 0.3s, background 0.3s;
+}
+.floating-label input:focus {
+  border-color: #FFD600;
+  background: rgba(35,43,59,0.55);
+}
+.floating-label label {
+  left: 38px;
+  font-size: 11.5px;
+  color: #FFD600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', Helvetica, Arial, sans-serif;
+  text-shadow: 0 1px 4px #000a;
+}
+.log-in, .log-in h4, .log-in p, .log-in label, .log-in input, .log-in button {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', Helvetica, Arial, sans-serif;
+  text-shadow: 0 1px 4px #000a;
+}
+.button.login-button {
+  width: 100%;
+  min-width: 100px;
+  border-radius: 18px;
+  text-align: center;
+  padding: 10px 0;
+  margin-top: 8px;
+  background-color: #FF4509;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0px 2px 6px -1px rgba(0,0,0,.13);
+  border: none;
+  transition: all 0.3s;
+  outline: 0;
+}
+.button.login-button:hover {
+  background: #E53E3E;
+  transform: translateY(-2px);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+  width: 100%;
+}
+.form-group label {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 4px #000a;
+}
+.form-group input {
+  font-size: 14px;
+  padding: 10px 14px;
+  height: 36px;
+  border-radius: 18px;
+  background: rgba(35,43,59,0.35);
+  border: 1.5px solid #374151;
+  box-shadow: none;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco', Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  transition: border-color 0.3s, background 0.3s;
+}
+.form-group input:focus {
+  border-color: #FFD600;
+  background: rgba(35,43,59,0.55);
+  outline: none;
+}
+
+.login-welcome {
+  margin-bottom: 18px;
+}
+.login-title-main {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 1px 4px #000a;
+}
+.login-title-sub {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #fff;
+  opacity: 0.85;
+  text-shadow: 0 1px 4px #000a;
+}
+
+.login-center-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  width: 100%;
+  min-height: 480px;
+}
+@media (max-width: 700px) {
+  .login-center-wrapper {
+    align-items: center;
+    min-height: 320px;
+  }
+}

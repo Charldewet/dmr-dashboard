@@ -294,8 +294,35 @@ def extract_report_data(soup) -> List[Dict]: # Return list of dictionaries
     return all_entries
 
 
-def fetch_latest_report():
-    """Connects to Gmail, searches for DMR report emails from the last 7 days, extracts data, and saves it if the date is not already in the DB. Returns the count of new days processed."""
+def load_pharmacy_env(pharmacy):
+    env_map = {
+        'reitz': '.env.reitz',
+        'villiers': '.env.villiers',
+        'roos': '.env.roos',
+        'tugela': '.env.tugela',
+        'winterton': '.env.winterton',
+    }
+    env_file = env_map.get(pharmacy, '.env.reitz')
+    load_dotenv(env_file, override=True)
+
+
+def get_pharmacy_session(pharmacy):
+    db_map = {
+        'reitz': 'reports.db',
+        'villiers': 'reports_villiers.db',
+        'roos': 'reports_roos.db',
+        'tugela': 'reports_tugela.db',
+        'winterton': 'reports_winterton.db',
+    }
+    db_file = db_map.get(pharmacy, 'reports.db')
+    db_path = os.path.join(BASE_DIR, db_file)
+    db_url = f"sqlite:///{os.path.abspath(db_path)}"
+    engine = create_engine(db_url, echo=False, future=True)
+    return sessionmaker(bind=engine, autoflush=False, autocommit=False)()
+
+
+def fetch_latest_report(pharmacy='reitz'):
+    load_pharmacy_env(pharmacy)
     user = os.getenv('GMAIL_USERNAME')
     password = os.getenv('GMAIL_APP_PASSWORD')
     sender = os.getenv('REPORT_SENDER')
@@ -335,7 +362,7 @@ def fetch_latest_report():
             return 0 # Return 0 days added
 
         print(f"Found {len(uids)} emails in the date range. Processing...")
-        session = SessionLocal() # Create session outside the loop
+        session = get_pharmacy_session(pharmacy) # Create session outside the loop
 
         for uid in uids:
             report_date = None # Reset for each email
@@ -375,6 +402,7 @@ def fetch_latest_report():
 
                 # --- If report doesn't exist, proceed with parsing and saving ---
                 message = email.message_from_bytes(msg_data)
+                subject_line = envelope.subject.decode() if envelope and envelope.subject else ""
                 html_content = None
                 if message.is_multipart():
                     for part in message.walk():
@@ -394,6 +422,12 @@ def fetch_latest_report():
                     except Exception as e:
                         print(f"UID {uid}: Error decoding body: {e}")
 
+                if (
+                    "Daily Management Report" not in subject_line
+                    and (not html_content or "Daily Management Report" not in html_content)
+                ):
+                    print(f"UID {uid}: Skipping email, does not contain 'Daily Management Report'.")
+                    continue
 
                 if html_content:
                     soup = BeautifulSoup(html_content, 'lxml')
@@ -418,11 +452,13 @@ def fetch_latest_report():
 
         session.close() # Close session after processing all emails
         print(f"Fetch complete. Added data for {len(saved_dates)} new dates.")
+        populate_monthly_closing_stock(pharmacy)
         return len(saved_dates) # Return the count of unique dates saved
 
 
-def fetch_and_save_history(start_date_str, end_date_str):
+def fetch_and_save_history(start_date_str, end_date_str, pharmacy='reitz'):
     """Fetch all report emails between start and end (inclusive) and save to DB."""
+    load_pharmacy_env(pharmacy)
     user = os.getenv('GMAIL_USERNAME')
     password = os.getenv('GMAIL_APP_PASSWORD')
     sender = os.getenv('REPORT_SENDER')
@@ -475,6 +511,7 @@ def fetch_and_save_history(start_date_str, end_date_str):
             print(f"Processing UID {uid} for date: {report_date}")
             msg = email.message_from_bytes(msg_data)
 
+            subject_line = envelope.subject.decode() if envelope and envelope.subject else ""
             html = None
             if msg.is_multipart():
                 for part in msg.walk():
@@ -492,6 +529,13 @@ def fetch_and_save_history(start_date_str, end_date_str):
                  except Exception as e:
                      print(f"Error decoding body for UID {uid}: {e}")
 
+            if (
+                "Daily Management Report" not in subject_line
+                and (not html or "Daily Management Report" not in html)
+            ):
+                print(f"UID {uid}: Skipping email, does not contain 'Daily Management Report'.")
+                continue
+
             if not html:
                 print(f"No HTML content found for UID {uid}. Skipping.")
                 continue
@@ -503,9 +547,11 @@ def fetch_and_save_history(start_date_str, end_date_str):
                 continue
 
             print(f"Saving {len(extracted_entries)} entries for {report_date} (UID: {uid})...")
-            save_entries(extracted_entries, report_date) # Pass the list
+            session = get_pharmacy_session(pharmacy)
+            save_entries(extracted_entries, report_date, session) # Pass the list
 
     print("History import completed.")
+    populate_monthly_closing_stock(pharmacy)
 
 
 # --- Backend API Helper Functions ---
@@ -533,8 +579,8 @@ def get_month_to_date_entries(report_date):
     return results
 
 # --- NEW: Populate MonthlyClosingStock from ReportEntry ---
-def populate_monthly_closing_stock():
-    session = SessionLocal()
+def populate_monthly_closing_stock(pharmacy='reitz'):
+    session = get_pharmacy_session(pharmacy)
     try:
         min_date = session.query(func.min(ReportEntry.date)).scalar()
         max_date = session.query(func.max(ReportEntry.date)).scalar()
@@ -571,7 +617,7 @@ def populate_monthly_closing_stock():
                     ))
             current = (current.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
         session.commit()
-        print("Monthly closing stock table populated.")
+        print(f"Monthly closing stock table populated for {pharmacy}.")
     except Exception as e:
         session.rollback()
         print("Error populating monthly closing stock:", e)
@@ -581,11 +627,16 @@ def populate_monthly_closing_stock():
 # --- Main Execution ---
 if __name__ == '__main__':
     # Handle optional history import
-    if len(sys.argv) == 4 and sys.argv[1] == 'history':
-        _, _, start_d, end_d = sys.argv
-        fetch_and_save_history(start_d, end_d)
+    if len(sys.argv) >= 4 and sys.argv[1] == 'history':
+        _, _, start_d, end_d, *rest = sys.argv
+        pharmacy = rest[0] if rest else 'reitz'
+        fetch_and_save_history(start_d, end_d, pharmacy)
         sys.exit(0)
-
+    # Handle populate_monthly_closing_stock from CLI
+    if len(sys.argv) >= 2 and sys.argv[1] == 'populate_stock':
+        pharmacy = sys.argv[2] if len(sys.argv) > 2 else 'reitz'
+        populate_monthly_closing_stock(pharmacy)
+        sys.exit(0)
     # Default: fetch and save today's report
     fetch_latest_report()
 

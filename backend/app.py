@@ -4,13 +4,15 @@ import sys
 import datetime
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from sqlalchemy import func
-import datetime as _dt
+from sqlalchemy import func, create_engine
+from sqlalchemy.orm import sessionmaker
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 # allow imports from project root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from main import fetch_latest_report, get_today_entries, get_month_to_date_entries, ReportEntry, SessionLocal, DATABASE_URL, MonthlyClosingStock
+from main import fetch_latest_report, get_today_entries, get_month_to_date_entries, ReportEntry, DATABASE_URL, MonthlyClosingStock
 
 print(f"--- BACKEND DEBUG: Using DATABASE_URL: {DATABASE_URL} ---")
 
@@ -19,9 +21,112 @@ frontend_build_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '.
 
 # Initialize Flask app pointing to the correct static folder
 app = Flask(__name__, static_folder=frontend_build_path, static_url_path='/')
-CORS(app)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'a_default_secret_key_for_development_only') # IMPORTANT: Set a strong SECRET_KEY env var for production
+CORS(app, supports_credentials=True) # Enable CORS with credentials support
+
+# --- Flask-Login Setup ---
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+# --- User Model (Simple In-Memory User) ---
+# In a real app, load users from a database
+class User(UserMixin):
+    def __init__(self, id, username, password_hash):
+        self.id = id
+        self.username = username
+        self.password_hash = password_hash
+
+# For demonstration, hardcode one user. Replace with database lookup.
+# Generate a hash for a password like 'password' (replace with a strong one!)
+# To generate hash: from werkzeug.security import generate_password_hash; print(generate_password_hash('your_password'))
+hashed_password_charl = generate_password_hash('gadpuh-3ginma-xikViw', method='pbkdf2:sha256')
+hashed_password_anmarie = generate_password_hash('Detpuk-virxyj-0hevsy', method='pbkdf2:sha256')
+hashed_password_mauritz = generate_password_hash('Vapcud-2jivam-ziqRop', method='pbkdf2:sha256')
+hashed_password_elani = generate_password_hash('Qidvok-7xumla-pecWen', method='pbkdf2:sha256')
+hashed_password_lize = generate_password_hash('Zovtyd-6kycja-gixBic', method='pbkdf2:sha256') # NEW
+users = {
+    1: User(id=1, username='Charl', password_hash=hashed_password_charl),
+    2: User(id=2, username='Anmarie', password_hash=hashed_password_anmarie),
+    3: User(id=3, username='Mauritz', password_hash=hashed_password_mauritz),
+    4: User(id=4, username='Elani', password_hash=hashed_password_elani),
+    5: User(id=5, username='Lize', password_hash=hashed_password_lize) # NEW
+}
+
+# --- NEW: Define allowed pharmacies per user ---
+ALLOWED_PHARMACIES = {
+    'Charl': ['reitz', 'villiers', 'roos', 'tugela', 'winterton'],
+    'Anmarie': ['reitz', 'villiers', 'roos', 'tugela', 'winterton'],
+    'Mauritz': ['villiers'],
+    'Elani': ['villiers'],
+    'Lize': ['tugela', 'winterton'] # NEW
+}
+
+@login_manager.user_loader
+def load_user(user_id):
+    # Load user from our 'database' (the dictionary)
+    return users.get(int(user_id))
+
+# --- Pharmacy DB mapping ---
+PHARMACY_DB_MAP = {
+    'reitz': 'reports.db',
+    'villiers': 'reports_villiers.db',
+    'roos': 'reports_roos.db',
+    'tugela': 'reports_tugela.db',
+    'winterton': 'reports_winterton.db',
+}
+
+def get_pharmacy_session():
+    pharmacy = request.headers.get('X-Pharmacy', 'reitz').lower()
+    db_file = PHARMACY_DB_MAP.get(pharmacy, 'reports.db')
+    db_path = os.path.join(os.path.dirname(__file__), '..', db_file)
+    db_url = f"sqlite:///{os.path.abspath(db_path)}"
+    engine = create_engine(db_url, echo=False, future=True)
+    return sessionmaker(bind=engine, autoflush=False, autocommit=False)()
+
+# --- Authentication API Endpoints ---
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    if current_user.is_authenticated:
+        return jsonify({'message': 'Already logged in'}), 200
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    # Find user (replace with database lookup)
+    user = None
+    for u in users.values():
+        if u.username == username:
+            user = u
+            break
+
+    if user and check_password_hash(user.password_hash, password):
+        login_user(user, remember=True) # Use remember=True for persistent session
+        return jsonify({'message': 'Login successful', 'username': user.username}), 200
+    else:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+@app.route('/api/logout', methods=['POST'])
+@login_required # Must be logged in to log out
+def logout():
+    logout_user()
+    return jsonify({'message': 'Logout successful'}), 200
+
+@app.route('/api/check_auth', methods=['GET'])
+def check_auth():
+    if current_user.is_authenticated:
+        # --- FIX: Add logic to get and return allowed pharmacies --- 
+        allowed = ALLOWED_PHARMACIES.get(current_user.username, []) # Get list or default to empty
+        return jsonify({
+            'isLoggedIn': True, 
+            'username': current_user.username,
+            'allowed_pharmacies': allowed # Include the list in the response
+        }), 200
+        # --- End FIX ---
+    else:
+        return jsonify({'isLoggedIn': False}), 200
 
 @app.route('/api/today', methods=['GET'])
+@login_required # <-- Protect this route
 def api_today():
     # Fetch and save the latest report data
     fetch_latest_report()
@@ -34,6 +139,7 @@ def api_today():
     return jsonify(result)
 
 @app.route('/api/mtd', methods=['GET'])
+@login_required
 def api_mtd():
     # Fetch and save the latest report data
     fetch_latest_report()
@@ -46,10 +152,11 @@ def api_mtd():
     return jsonify(result)
 
 @app.route('/api/day/<date_str>', methods=['GET'])
+@login_required
 def api_day(date_str):
     """Return all report entries for a specific date."""
     try:
-        d = _dt.datetime.strptime(date_str, '%Y-%m-%d').date()
+        d = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'error': 'invalid date format'}), 400
     entries = get_today_entries(d)
@@ -60,25 +167,26 @@ def api_day(date_str):
     return jsonify(result)
 
 @app.route('/api/month/<month_str>/turnover', methods=['GET'])
+@login_required
 def api_month_turnover(month_str):
     """Return DAILY turnover totals AND avg basket value for ALL days the given month (YYYY-MM), padding with 0 where no data exists."""
     print(f"--- DEBUG: ENTERING api_month_turnover for {month_str} ---")
     try:
         print(f"--- DEBUG: Trying to parse date for {month_str} ---")
         year, month = map(int, month_str.split('-'))
-        start_date = _dt.date(year, month, 1)
+        start_date = datetime.date(year, month, 1)
         # Calculate the last day of the month
         if month == 12:
-            end_date = _dt.date(year, 12, 31)
+            end_date = datetime.date(year, 12, 31)
         else:
-            end_date = _dt.date(year, month + 1, 1) - _dt.timedelta(days=1)
+            end_date = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
         num_days = end_date.day # Get number of days in the month
     except Exception as e:
         print(f"--- DEBUG: ERROR during date parsing for {month_str}: {e} ---")
         return jsonify({'error': 'invalid month format'}), 400
     
     print(f"--- DEBUG: Opening database session for {month_str} ---")
-    session = SessionLocal()
+    session = get_pharmacy_session()
     processed_data = {}
     try:
         print(f"--- DEBUG: Executing database query for {month_str} ---")
@@ -135,29 +243,30 @@ def api_month_turnover(month_str):
 
 # NEW Endpoint for Cumulative Comparison
 @app.route('/api/month/<month_str>/turnover/comparison', methods=['GET'])
+@login_required
 def api_month_turnover_comparison(month_str):
     """Return CUMULATIVE daily turnover totals for the given month and the previous year's same month (YYYY-MM)."""
     try:
         year, month = map(int, month_str.split('-'))
         
         # Current year dates
-        start_current = _dt.date(year, month, 1)
+        start_current = datetime.date(year, month, 1)
         next_month_current = month % 12 + 1
         next_year_current = year + (month // 12)
-        end_current = _dt.date(next_year_current, next_month_current, 1) - _dt.timedelta(days=1)
+        end_current = datetime.date(next_year_current, next_month_current, 1) - datetime.timedelta(days=1)
 
         # Previous year dates
         prev_year = year - 1
-        start_prev = _dt.date(prev_year, month, 1)
+        start_prev = datetime.date(prev_year, month, 1)
         next_month_prev = month % 12 + 1
         next_year_prev = prev_year + (month // 12)
-        end_prev = _dt.date(next_year_prev, next_month_prev, 1) - _dt.timedelta(days=1)
+        end_prev = datetime.date(next_year_prev, next_month_prev, 1) - datetime.timedelta(days=1)
 
     except Exception as e:
         print(f"Error parsing date or calculating date range: {e}") 
         return jsonify({'error': 'invalid month format or date calculation error'}), 400
     
-    session = SessionLocal()
+    session = get_pharmacy_session()
     try: 
         # --- Query for current year (Daily) ---
         rows_current_daily = session.query(
@@ -223,19 +332,20 @@ def api_month_turnover_comparison(month_str):
         session.close()
 
 @app.route('/api/month/<month_str>/cumulative_turnover', methods=['GET'])
+@login_required
 def api_month_cumulative_turnover(month_str):
     """Return cumulative daily turnover totals for the given month (YYYY-MM)."""
     try:
         year, month = map(int, month_str.split('-'))
-        start = _dt.date(year, month, 1)
+        start = datetime.date(year, month, 1)
         # compute last day of month
         next_month = month % 12 + 1
         next_year = year + (month // 12)
-        end = _dt.date(next_year, next_month, 1) - _dt.timedelta(days=1)
+        end = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
     except Exception:
         return jsonify({'error': 'invalid month format'}), 400
     
-    session = SessionLocal()
+    session = get_pharmacy_session()
     rows = session.query(
         ReportEntry.date,
         func.sum(ReportEntry.today_value).label('daily_turnover')
@@ -259,18 +369,19 @@ def api_month_cumulative_turnover(month_str):
     return jsonify(cumulative_data)
 
 @app.route('/api/month/<month_str>/cumulative_costs', methods=['GET'])
+@login_required
 def api_month_cumulative_costs(month_str):
     """Return cumulative daily Cost of Sales and Purchases for the given month (YYYY-MM)."""
     try:
         year, month = map(int, month_str.split('-'))
-        start = _dt.date(year, month, 1)
+        start = datetime.date(year, month, 1)
         next_month = month % 12 + 1
         next_year = year + (month // 12)
-        end = _dt.date(next_year, next_month, 1) - _dt.timedelta(days=1)
+        end = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
     except Exception:
         return jsonify({'error': 'invalid month format'}), 400
     
-    session = SessionLocal()
+    session = get_pharmacy_session()
     rows = session.query(
         ReportEntry.date,
         func.sum(ReportEntry.today_value).label('value'),
@@ -328,23 +439,24 @@ def api_month_cumulative_costs(month_str):
                  'cumulative_purchases': cumulative_purchase
              })
 
-        current_date += _dt.timedelta(days=1)
+        current_date += datetime.timedelta(days=1)
         
     return jsonify(cumulative_data)
 
 @app.route('/api/month/<month_str>/aggregates', methods=['GET'])
+@login_required
 def api_month_aggregates(month_str):
     """Return monthly aggregates including POS Transactions from SALES SUMMARY."""
     try:
         year, month = map(int, month_str.split('-'))
-        start = _dt.date(year, month, 1)
+        start = datetime.date(year, month, 1)
         # compute last day of month
         next_month = month % 12 + 1
         next_year = year + (month // 12)
-        end = _dt.date(next_year, next_month, 1) - _dt.timedelta(days=1)
+        end = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
     except Exception:
         return jsonify({'error': 'invalid month format'}), 400
-    session = SessionLocal()
+    session = get_pharmacy_session()
     # aggregate turnover
     total_turnover = session.query(func.sum(ReportEntry.today_value)).filter(
         ReportEntry.category == 'TURNOVER SUMMARY',
@@ -419,23 +531,24 @@ def api_month_aggregates(month_str):
 
 # NEW Endpoint for Yearly Daily Turnover Data
 @app.route('/api/year/<year_str>/daily_turnover', methods=['GET'])
+@login_required
 def api_year_daily_turnover(year_str):
     """Return all daily turnover totals for the given year (YYYY) AND the previous year."""
     try:
         year = int(year_str)
         prev_year = year - 1
         # Date ranges
-        start_current = _dt.date(year, 1, 1)
-        end_current = _dt.date(year, 12, 31)
-        start_prev = _dt.date(prev_year, 1, 1)
-        end_prev = _dt.date(prev_year, 12, 31)
+        start_current = datetime.date(year, 1, 1)
+        end_current = datetime.date(year, 12, 31)
+        start_prev = datetime.date(prev_year, 1, 1)
+        end_prev = datetime.date(prev_year, 12, 31)
     except ValueError:
         return jsonify({'error': 'invalid year format'}), 400
     except Exception as e:
         print(f"Error calculating year date range: {e}")
         return jsonify({'error': 'error processing year'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     current_year_turnovers = {}
     previous_year_turnovers = {}
     try:
@@ -480,21 +593,22 @@ def api_year_daily_turnover(year_str):
 
 # NEW: Endpoint for Yearly Aggregates
 @app.route('/api/year/<year_str>/aggregates', methods=['GET'])
+@login_required
 def api_year_aggregates(year_str):
     """Return key yearly aggregates for the specified year and previous year."""
     try:
         year = int(year_str)
         prev_year = year - 1
-        start_current = _dt.date(year, 1, 1)
-        end_current = _dt.date(year, 12, 31)
-        start_prev = _dt.date(prev_year, 1, 1)
-        end_prev = _dt.date(prev_year, 12, 31)
+        start_current = datetime.date(year, 1, 1)
+        end_current = datetime.date(year, 12, 31)
+        start_prev = datetime.date(prev_year, 1, 1)
+        end_prev = datetime.date(prev_year, 12, 31)
     except ValueError:
         return jsonify({'error': 'invalid year format'}), 400
     except Exception as e:
         return jsonify({'error': 'error processing year'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     aggregates = {
         'current_turnover': 0.0,
         'current_cost_of_sales': 0.0,
@@ -580,6 +694,7 @@ def api_year_aggregates(year_str):
 
 # NEW: Endpoint for Monthly Summaries for a Year
 @app.route('/api/year/<year_str>/monthly_summaries', methods=['GET'])
+@login_required
 def api_year_monthly_summaries(year_str):
     """Return monthly summaries (Turnover, Prev Yr Turnover, Transactions, Avg Basket Value/Size Reported) for the given year."""
     try:
@@ -588,17 +703,17 @@ def api_year_monthly_summaries(year_str):
     except ValueError:
         return jsonify({'error': 'invalid year format'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     summaries = []
     try:
         for month in range(1, 13):
-            start_current = _dt.date(year, month, 1)
-            next_month_date = start_current + _dt.timedelta(days=32) # Go to roughly next month
-            end_current = next_month_date.replace(day=1) - _dt.timedelta(days=1)
+            start_current = datetime.date(year, month, 1)
+            next_month_date = start_current + datetime.timedelta(days=32) # Go to roughly next month
+            end_current = next_month_date.replace(day=1) - datetime.timedelta(days=1)
 
-            start_prev = _dt.date(prev_year, month, 1)
-            next_month_prev_date = start_prev + _dt.timedelta(days=32)
-            end_prev = next_month_prev_date.replace(day=1) - _dt.timedelta(days=1)
+            start_prev = datetime.date(prev_year, month, 1)
+            next_month_prev_date = start_prev + datetime.timedelta(days=32)
+            end_prev = next_month_prev_date.replace(day=1) - datetime.timedelta(days=1)
 
             # Current Month Turnover
             current_turnover = session.query(func.sum(ReportEntry.today_value)).filter(
@@ -669,19 +784,20 @@ def api_year_monthly_summaries(year_str):
 
 # NEW: Endpoint for Stock KPIs for a given month
 @app.route('/api/month/<month_str>/stock_kpis', methods=['GET'])
+@login_required
 def api_month_stock_kpis(month_str):
     """Return key stock KPIs for the given month (YYYY-MM)."""
     try:
         year, month = map(int, month_str.split('-'))
-        start_date = _dt.date(year, month, 1)
+        start_date = datetime.date(year, month, 1)
         # compute last day of month
         next_month = month % 12 + 1
         next_year = year + (month // 12)
-        end_date = _dt.date(next_year, next_month, 1) - _dt.timedelta(days=1)
+        end_date = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
     except Exception:
         return jsonify({'error': 'invalid month format'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     kpis = {
         'opening_stock': 0.0,
         'closing_stock': 0.0,
@@ -780,20 +896,21 @@ def api_month_stock_kpis(month_str):
 
 # NEW: Endpoint for Daily Stock Movements for a given month
 @app.route('/api/month/<month_str>/daily_stock_movements', methods=['GET'])
+@login_required
 def api_month_daily_stock_movements(month_str):
     """Return daily Purchases and Cost of Sales for the given month (YYYY-MM)."""
     try:
         year, month = map(int, month_str.split('-'))
-        start_date = _dt.date(year, month, 1)
+        start_date = datetime.date(year, month, 1)
         # compute last day of month
         next_month = month % 12 + 1
         next_year = year + (month // 12)
-        end_date = _dt.date(next_year, next_month, 1) - _dt.timedelta(days=1)
+        end_date = datetime.date(next_year, next_month, 1) - datetime.timedelta(days=1)
         num_days = end_date.day
     except Exception:
         return jsonify({'error': 'invalid month format'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     daily_data = {}
     try:
         rows = session.query(
@@ -838,19 +955,20 @@ def api_month_daily_stock_movements(month_str):
 
 # NEW: Endpoint for Yearly Daily Stock Movements
 @app.route('/api/year/<year_str>/daily_stock_movements', methods=['GET'])
+@login_required
 def api_year_daily_stock_movements(year_str):
     """Return daily Purchases and Cost of Sales for the entire given year (YYYY)."""
     try:
         year = int(year_str)
-        start_date = _dt.date(year, 1, 1)
-        end_date = _dt.date(year, 12, 31)
+        start_date = datetime.date(year, 1, 1)
+        end_date = datetime.date(year, 12, 31)
     except ValueError:
         return jsonify({'error': 'invalid year format'}), 400
     except Exception as e:
         print(f"Error calculating year date range: {e}")
         return jsonify({'error': 'error processing year'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     yearly_data = {}
     try:
         rows = session.query(
@@ -886,6 +1004,7 @@ def api_year_daily_stock_movements(year_str):
 
 # NEW: Endpoint for Monthly Stock vs Sales for a Year
 @app.route('/api/year/<year_str>/monthly_stock_sales', methods=['GET'])
+@login_required
 def api_year_monthly_stock_sales(year_str):
     """Return monthly Turnover and Closing Stock for the given year (YYYY)."""
     try:
@@ -893,15 +1012,15 @@ def api_year_monthly_stock_sales(year_str):
     except ValueError:
         return jsonify({'error': 'invalid year format'}), 400
 
-    session = SessionLocal()
+    session = get_pharmacy_session()
     results = [] 
     try:
         for month in range(1, 13):
-            start_date = _dt.date(year, month, 1)
+            start_date = datetime.date(year, month, 1)
             # Compute last day of month
             next_month = month % 12 + 1
             next_year_for_end = year + (month // 12)
-            end_date = _dt.date(next_year_for_end, next_month, 1) - _dt.timedelta(days=1)
+            end_date = datetime.date(next_year_for_end, next_month, 1) - datetime.timedelta(days=1)
             
             # --- Monthly Turnover --- 
             turnover = session.query(func.sum(ReportEntry.today_value)).filter(
@@ -943,9 +1062,10 @@ def api_year_monthly_stock_sales(year_str):
 
 # Endpoint to get the most recent date with data
 @app.route('/api/latest_date', methods=['GET'])
+@login_required
 def api_latest_date():
     """Return the most recent date found in the ReportEntry table."""
-    session = SessionLocal()
+    session = get_pharmacy_session()
     latest_date = None
     try:
         max_date_result = session.query(func.max(ReportEntry.date)).scalar()
@@ -953,12 +1073,12 @@ def api_latest_date():
             latest_date = max_date_result.isoformat()
         else:
             # Fallback if no data exists (optional: return today?)
-            latest_date = _dt.date.today().isoformat() 
+            latest_date = datetime.date.today().isoformat() 
             
     except Exception as e:
         print(f"Error querying latest date: {e}")
         # Return today's date on error
-        latest_date = _dt.date.today().isoformat()
+        latest_date = datetime.date.today().isoformat()
     finally:
         session.close()
         
@@ -966,11 +1086,12 @@ def api_latest_date():
 
 # --- NEW: API endpoint for closing stock history ---
 @app.route('/api/stock/closing_history')
+@login_required
 def api_closing_history():
     """Return closing stock for the last N months ending with a given month."""
     months = int(request.args.get('months', 18))
     end_month = request.args.get('end')  # Format: 'YYYY-MM'
-    session = SessionLocal()
+    session = get_pharmacy_session()
     try:
         q = session.query(MonthlyClosingStock).order_by(MonthlyClosingStock.month.desc())
         if end_month:
@@ -987,15 +1108,17 @@ def api_closing_history():
 
 # --- Add this new endpoint at the end of the file or after other routes ---
 @app.route('/api/fetch_reports', methods=['POST'])
+@login_required
 def api_fetch_reports():
     new_days_count = 0 # Default value
     try:
         print("--- Fetching latest report triggered via API ---")
-        new_days_count = fetch_latest_report() # Capture the returned count
+        pharmacy = request.headers.get('X-Pharmacy', 'reitz').lower()
+        new_days_count = fetch_latest_report(pharmacy) # Pass pharmacy to load correct .env
         print(f"--- Report fetch process completed, {new_days_count} new days added ---")
 
         # Query for the latest date AFTER fetching
-        session = SessionLocal()
+        session = get_pharmacy_session()
         latest_date_obj = session.query(func.max(ReportEntry.date)).scalar()
         session.close()
         latest_date_str = latest_date_obj.isoformat() if latest_date_obj else "N/A"
@@ -1008,7 +1131,6 @@ def api_fetch_reports():
         }), 200
     except Exception as e:
         print(f"--- Error during API fetch_reports: {e} ---")
-        # Return the count even on error? Or just error? Let's just return error.
         return jsonify({'error': str(e)}), 500
 
 # --- Add this code to serve the React App ---
