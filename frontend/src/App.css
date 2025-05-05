@@ -73,8 +73,8 @@ a:hover { text-decoration: underline; }
 
 /* Layout */
 .dashboard-container {
-  width: 80vw;
-  max-width: 80vw;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   padding: var(--padding-section-md) var(--padding-edge-lg);
   padding-top: 2rem;
@@ -1186,6 +1186,7 @@ html, body {
   .kpis-grid--dashboard {
      /* Keep 5 on larger tablets? Or reduce? e.g. */
      /* grid-template-columns: repeat(3, 1fr); */ 
+     grid-template-columns: repeat(3, 1fr); /* Change to 3 columns on tablets */
   }
   .kpis-grid--dashboard-secondary {
      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Allow flexible wrapping */
@@ -1216,11 +1217,14 @@ html, body {
      gap: 0.5rem;
   }
 
-  .kpis-grid--dashboard,
+  .kpis-grid--dashboard {
+    grid-template-columns: repeat(2, 1fr); /* Force 2 columns */
+  }
+
   .kpis-grid--daily,
   .kpis-grid--yearly,
   .kpis-grid--stock-placeholder {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* More flexible wrapping */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Keep auto-fit for others? Or set to 2? */
   }
 
   .kpis-grid--dashboard-secondary {
@@ -1240,6 +1244,11 @@ html, body {
     grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Wrap month buttons */
     gap: 0.5rem;
     margin-top: 0.5rem;
+  }
+
+  /* Reduce padding inside ALL kpi cards on mobile */
+  .kpi-card {
+    padding: 1rem; /* Reduce padding */
   }
 
   /* Further mobile adjustments can be added */
