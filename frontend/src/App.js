@@ -481,6 +481,20 @@ function App() {
 
   // ** Update useEffect for yearly data - Revert to FE calculation **
   useEffect(() => {
+    // --- NEW: Prevent fetch if not logged in ---
+    if (!isLoggedIn) {
+      console.log("Yearly useEffect: Skipping fetch because user is not logged in.");
+      // Optionally clear yearly data states here if needed
+      setYearlyData({});
+      setMaxYearlyTurnover(0);
+      setPreviousYearlyData({});
+      setCalculatedMonthlyTotals([]);
+      setAdjustedYearlyYoY(null);
+      setYearlyAggregates({ /* default values */ });
+      return; 
+    }
+    // --- End NEW ---
+    
     if (view !== 'yearly' && view !== 'dashboard') {
        setCalculatedMonthlyTotals([]); // Clear calculated totals when leaving
        return;
