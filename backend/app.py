@@ -1144,6 +1144,114 @@ def serve(path):
         # Serve index.html for the root or any unknown path (React Router handles routing)
         return send_from_directory(app.static_folder, 'index.html')
 
+# --- NEW: Endpoint for combined rolling window data ---
+@app.route('/api/dashboard/rolling_window', methods=['GET'])
+@login_required
+def api_dashboard_rolling_window():
+    """Return aggregated data needed for 12-month rolling charts in a single call."""
+    try:
+        end_year = int(request.args.get('year', datetime.date.today().year))
+        end_month = int(request.args.get('month', datetime.date.today().month))
+    except ValueError:
+        return jsonify({'error': 'Invalid year or month parameter'}), 400
+
+    results = {}
+    session = get_pharmacy_session()
+    try:
+        # Calculate the 12 months needed (end_year/end_month inclusive)
+        months_needed = []
+        current_date = datetime.date(end_year, end_month, 1)
+        for _ in range(12):
+            months_needed.append(current_date.strftime('%Y-%m'))
+            # Go to previous month
+            first_day_current = current_date
+            last_day_prev = first_day_current - datetime.timedelta(days=1)
+            current_date = last_day_prev.replace(day=1)
+        months_needed.reverse() # Chronological order
+
+        # Query for all needed months in one go
+        # Select month string, description, and sum(value)
+        query_results = session.query(
+            func.strftime('%Y-%m', ReportEntry.date).label('month_str'),
+            ReportEntry.description,
+            func.sum(ReportEntry.today_value).label('total_value')
+        ).filter(
+            ReportEntry.date >= current_date, # Start date is now the earliest month needed
+            ReportEntry.date <= datetime.date(end_year, end_month, 1).replace(day=28)+datetime.timedelta(days=4), # Ensure we cover the end month
+            func.strftime('%Y-%m', ReportEntry.date).in_(months_needed),
+            ReportEntry.category.in_(['TURNOVER SUMMARY', 'STOCK TRADING ACCOUNT', 'SALES SUMMARY']) # Categories needed
+            # Add filter for specific descriptions needed for the charts
+            # (Turnover, CostOfSales, Purchases, AvgBasketValue)
+            # This might need adjustment based on exact description names
+            # ReportEntry.description.in_([
+            #     'TOTAL TURNOVER', # Assuming this is correct
+            #     'Cost Of Sales',
+            #     'Purchases',
+            #     'Average Value Per Docket/Basket' 
+            # ])
+        ).group_by(
+            'month_str',
+            ReportEntry.description
+        ).all()
+
+        # Initialize results dictionary for each month
+        for month_key in months_needed:
+            results[month_key] = {
+                'month': month_key,
+                'turnover': 0.0,
+                'costOfSales': 0.0,
+                'purchases': 0.0,
+                'avgBasketValueReported': 0.0
+            }
+
+        # Process query results
+        for row in query_results:
+            month_key = row.month_str
+            desc = row.description
+            value = row.total_value or 0.0
+
+            if month_key in results: # Should always be true based on filter
+                if 'TOTAL TURNOVER' in desc: # Handle variations if needed
+                    results[month_key]['turnover'] = value
+                elif desc == 'Cost Of Sales':
+                    results[month_key]['costOfSales'] = value
+                elif desc == 'Purchases':
+                    results[month_key]['purchases'] = value
+                elif desc == 'Average Value Per Docket/Basket':
+                     # We need the AVERAGE daily reported value for the month, not the SUM
+                     # This part needs a separate query or different aggregation
+                     pass # Placeholder - Will calculate average separately below
+
+        # --- Calculate Average Basket Value Separately --- 
+        # Query average daily basket value grouped by month
+        avg_basket_results = session.query(
+            func.strftime('%Y-%m', ReportEntry.date).label('month_str'),
+            func.avg(ReportEntry.today_value).label('avg_value')
+        ).filter(
+            func.strftime('%Y-%m', ReportEntry.date).in_(months_needed),
+            ReportEntry.category == 'SALES SUMMARY',
+            ReportEntry.description == 'Average Value Per Docket/Basket'
+        ).group_by('month_str').all()
+        
+        for row in avg_basket_results:
+             if row.month_str in results:
+                 results[row.month_str]['avgBasketValueReported'] = row.avg_value or 0.0
+        # --- End Average Basket Value Calculation ---
+
+    except Exception as e:
+        print(f"Error querying rolling window data: {e}")
+        session.rollback()
+        # Return empty list or error structure?
+        return jsonify({"error": "Failed to retrieve rolling window data"}), 500
+    finally:
+        session.close()
+
+    # Convert results dict to list in chronological order
+    results_list = [results[m] for m in months_needed if m in results]
+    return jsonify(results_list)
+
+# --- End NEW Endpoint ---
+
 # Make sure your __main__ block is suitable for production
 if __name__ == '__main__':
    # Use 0.0.0.0 to be accessible externally (like on Render)

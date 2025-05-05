@@ -959,72 +959,47 @@ function App() {
     return result;
   }
 
-  // --- Fetch and build 12-month rolling window for dashboard (Turnover + Avg Basket Value) ---
-  const [dashboardRolling12Months, setDashboardRolling12Months] = useState([]);
+  // --- Fetch and build 12-month rolling window for dashboard (NOW USES NEW ENDPOINT) ---
+  const [dashboardRolling12MonthsData, setDashboardRolling12MonthsData] = useState([]);
 
   useEffect(() => {
-    if (view !== 'dashboard') {
-      setDashboardRolling12Months([]);
+    if (view !== 'dashboard' || !isLoggedIn) {
+      setDashboardRolling12MonthsData([]); // Clear data if not on dashboard or not logged in
       return;
     }
-    const monthsList = getLast12Months(selectedYear, month);
-    // Fetch aggregates for each (year, month) in the rolling window
-    Promise.all(
-      monthsList.map(({ year, month }) => {
-        const ym = `${year}-${String(month).padStart(2, '0')}`;
-        return axios.get(`/api/month/${ym}/aggregates`).then(res => ({
-          year,
-          month,
-          total: res.data?.turnover || 0,
-          avgBasketValueReported: res.data?.avgBasketValueReported || 0
-        })).catch(() => ({ year, month, total: 0, avgBasketValueReported: 0 }));
+    
+    // Fetch combined data from the new endpoint
+    const url = `/api/dashboard/rolling_window?year=${selectedYear}&month=${month}`;
+    console.log("Fetching rolling window data from:", url); // Log the URL
+    
+    axios.get(url)
+      .then(res => {
+        console.log("Received rolling window data:", res.data);
+        const processedData = (res.data || []).map(monthlyData => ({
+          // Format data for the charts
+          label: format(new Date(monthlyData.month + '-01T00:00:00'), "MMM ''yy"), // Parse YYYY-MM
+          total: monthlyData.turnover,
+          avgBasketValueReported: monthlyData.avgBasketValueReported,
+          costOfSales: monthlyData.costOfSales,
+          purchases: monthlyData.purchases
+        }));
+        setDashboardRolling12MonthsData(processedData);
       })
-    ).then(results => {
-      setDashboardRolling12Months(
-        results.map(({ year, month, total, avgBasketValueReported }) => ({
-          label: format(new Date(`${year}-${String(month).padStart(2, '0')}-01T00:00:00`), "MMM ''yy"),
-          total,
-          avgBasketValueReported
-        }))
-      );
-    });
-  }, [view, selectedYear, month, selectedPharmacy]);
+      .catch(error => {
+        console.error("Error fetching rolling window data:", error);
+        setDashboardRolling12MonthsData([]); // Clear data on error
+      });
 
-  // --- Helper: Build 12-month rolling window for cost of sales and purchases ---
+  // Dependencies: view, selected year/month, pharmacy (to trigger refetch if pharmacy changes), and loggedIn status
+  }, [view, selectedYear, month, selectedPharmacy, isLoggedIn]); 
+
+  // --- Helper: Build 12-month rolling window for cost of sales and purchases --- 
+  // REMOVED: This logic is now handled by processing dashboardRolling12MonthsData directly
+  /*
   const dashboardRolling12MonthsCostOfSales = (() => {
-    // Build a lookup for year/month to cost of sales and purchases for both years
-    const totalsByYearMonth = {};
-    // Current year
-    calculatedMonthlyTotals.forEach(entry => {
-      const ym = `${selectedYear}-${String(entry.month).padStart(2, '0')}`;
-      if (entry.costOfSales !== undefined) totalsByYearMonth[ym] = { costOfSales: entry.costOfSales };
-      if (entry.purchases !== undefined) {
-        if (!totalsByYearMonth[ym]) totalsByYearMonth[ym] = {};
-        totalsByYearMonth[ym].purchases = entry.purchases;
-      }
-    });
-    // Previous year
-    calculatedMonthlyTotals.forEach(entry => {
-      const ym = `${selectedYear - 1}-${String(entry.month).padStart(2, '0')}`;
-      if (entry.previousCostOfSales !== undefined) {
-        if (!totalsByYearMonth[ym]) totalsByYearMonth[ym] = {};
-        totalsByYearMonth[ym].costOfSales = entry.previousCostOfSales;
-      }
-      if (entry.previousPurchases !== undefined) {
-        if (!totalsByYearMonth[ym]) totalsByYearMonth[ym] = {};
-        totalsByYearMonth[ym].purchases = entry.previousPurchases;
-      }
-    });
-    const monthsList = getLast12Months(selectedYear, month);
-    return monthsList.map(({ year, month }) => {
-      const ym = `${year}-${String(month).padStart(2, '0')}`;
-      return {
-        label: format(new Date(`${ym}-01T00:00:00`), "MMM ''yy"),
-        costOfSales: totalsByYearMonth[ym]?.costOfSales || 0,
-        purchases: totalsByYearMonth[ym]?.purchases || 0
-      };
-    });
+    // ... old calculation logic ... 
   })();
+  */
 
   {/* --- 12-Month Rolling Window Bar Charts Row --- */}
   <div className="charts-row" style={{ marginTop: 'var(--gap-cards)' }}>
@@ -1032,8 +1007,9 @@ function App() {
     <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
       <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
       <ResponsiveContainer width="100%" height={220}>
-        {Array.isArray(dashboardRolling12Months) && dashboardRolling12Months.length > 0 ? (
-          <ComposedChart data={dashboardRolling12Months} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+        {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
             <XAxis 
               dataKey="label" 
@@ -1077,10 +1053,11 @@ function App() {
               }}
             />
             <Bar yAxisId="left" dataKey="total" name="Total Turnover">
-              {dashboardRolling12Months.map((entry, idx) => (
+              {/* UPDATE: Map over dashboardRolling12MonthsData */}
+              {dashboardRolling12MonthsData.map((entry, idx) => (
                   <Cell
                       key={`cell-dash-rolling12-${entry.label}`}
-                      fill={COLOR_CHARTREUSE} // Chartreuse
+                      fill={COLOR_COQUELICOT} 
                       radius={[4, 4, 0, 0]} 
                   />
               ))}
@@ -1090,7 +1067,7 @@ function App() {
               type="monotone" 
               dataKey="avgBasketValueReported" 
               name="Avg Basket Value" 
-              stroke={COLOR_ELECTRIC_PURPLE} 
+              stroke={COLOR_WHITE} 
               strokeWidth={4}
               dot={false}
               activeDot={false}
@@ -1106,8 +1083,9 @@ function App() {
     <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
       <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
       <ResponsiveContainer width="100%" height={220}>
-        {Array.isArray(dashboardRolling12MonthsCostOfSales) && dashboardRolling12MonthsCostOfSales.length > 0 ? (
-          <LineChart data={dashboardRolling12MonthsCostOfSales} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
             <XAxis 
               dataKey="label" 
@@ -1166,7 +1144,7 @@ function App() {
   <div className="chart-container" style={{ marginTop: 'var(--gap-cards)' }}>
     <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Avg Basket Value (Last 12 Months)</h3>
     <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={dashboardRolling12Months} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+      <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
         <XAxis 
           dataKey="label" 
@@ -1213,6 +1191,8 @@ function App() {
   </div>
 
   // --- Fetch monthly turnover data for DASHBOARD view (for daily turnover bar chart) ---
+  // REMOVE: This useEffect is no longer needed for the rolling window
+  /*
   useEffect(() => {
     if (view !== 'dashboard') return;
     const year = selectedYear;
@@ -1225,6 +1205,7 @@ function App() {
         setMonthlyData([]);
       });
   }, [view, selectedYear, month, selectedPharmacy]);
+  */
 
   // --- Check Authentication Status on Load ---
     // --- Check Authentication Status on Load ---
@@ -1679,8 +1660,9 @@ function App() {
             <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
               <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
               <ResponsiveContainer width="100%" height={220}>
-                {Array.isArray(dashboardRolling12Months) && dashboardRolling12Months.length > 0 ? (
-                  <ComposedChart data={dashboardRolling12Months} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+                {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+                  <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
                     <XAxis 
                       dataKey="label" 
@@ -1724,7 +1706,8 @@ function App() {
                       }}
                     />
                     <Bar yAxisId="left" dataKey="total" name="Total Turnover">
-                      {dashboardRolling12Months.map((entry, idx) => (
+                      {/* UPDATE: Map over dashboardRolling12MonthsData */}
+                      {dashboardRolling12MonthsData.map((entry, idx) => (
                           <Cell
                               key={`cell-dash-rolling12-${entry.label}`}
                               fill={COLOR_COQUELICOT} 
@@ -1753,8 +1736,9 @@ function App() {
     <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
       <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
       <ResponsiveContainer width="100%" height={220}>
-        {Array.isArray(dashboardRolling12MonthsCostOfSales) && dashboardRolling12MonthsCostOfSales.length > 0 ? (
-          <LineChart data={dashboardRolling12MonthsCostOfSales} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
             <XAxis 
               dataKey="label" 
