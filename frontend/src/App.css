@@ -305,9 +305,9 @@ label {
 /* Container for side-by-side charts */
 .charts-row {
   display: flex;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
-  gap: var(--gap-cards); /* Use the same gap as KPI cards */
-  margin-top: var(--gap-cards); /* Ensure space below top row */
+  gap: var(--gap-cards);
+  flex-wrap: wrap; /* Allow wrapping if needed, though stacking is preferred */
+  margin-bottom: var(--gap-cards);
 }
 
 /* Ensure charts within the row take up appropriate space */
@@ -1171,4 +1171,76 @@ html, body {
     align-items: center;
     min-height: 320px;
   }
+}
+
+/* --- Responsive Adjustments --- */
+
+/* Tablet and smaller screens (e.g., max-width 1024px or adjust as needed) */
+@media (max-width: 1024px) {
+  .charts-row {
+    flex-direction: column; /* Stack charts vertically */
+  }
+
+  /* Add more tablet-specific adjustments here */
+  /* Example: Adjust KPI grid columns */
+  .kpis-grid--dashboard {
+     /* Keep 5 on larger tablets? Or reduce? e.g. */
+     /* grid-template-columns: repeat(3, 1fr); */ 
+  }
+  .kpis-grid--dashboard-secondary {
+     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Allow flexible wrapping */
+  }
+
+}
+
+/* Mobile screens (e.g., max-width 767px) */
+@media (max-width: 767px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start; /* Align items to start */
+  }
+  .dashboard-nav {
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch; /* Make buttons/select full width */
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .dashboard-nav > select {
+    margin-right: 0; /* Remove right margin on select */
+  }
+  .update-button-container {
+     flex-direction: column; /* Stack update/logout */
+     width: 100%;
+     align-items: stretch;
+     gap: 0.5rem;
+  }
+
+  .kpis-grid--dashboard,
+  .kpis-grid--daily,
+  .kpis-grid--yearly,
+  .kpis-grid--stock-placeholder {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* More flexible wrapping */
+  }
+
+  .kpis-grid--dashboard-secondary {
+     grid-template-columns: 1fr; /* Stack secondary KPIs */
+  }
+
+  .top-row-layout {
+    flex-direction: column; /* Stack KPI grid and donut chart */
+  }
+
+  .month-selector-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .month-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Wrap month buttons */
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Further mobile adjustments can be added */
 }
