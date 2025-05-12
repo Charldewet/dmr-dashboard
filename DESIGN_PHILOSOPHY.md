@@ -149,6 +149,7 @@ All charts and graphs in the dashboard must use the following official color pal
 - **Gold**: `#FFD600`
 - **Electric Purple**: `#B200FF`
 - **Chartreuse**: `#7FFF00`
+- **White**: `#FFFFFF`
 
 These colors should be used consistently for all chart and gauge elements to ensure a cohesive and accessible visual identity across the dashboard.
 
