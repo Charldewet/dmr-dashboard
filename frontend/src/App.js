@@ -174,24 +174,6 @@ function InfoIcon() {
   );
 }
 
-// Helper to process cumulative costs so the line stops at the last data point
-const processMonthlyCumulativeCosts = (costsData) => {
-  if (!Array.isArray(costsData) || costsData.length === 0) return [];
-  const maxDayCostOfSales = Math.max(...costsData.filter(d => d.cumulative_cost_of_sales != null).map(d => parseInt(d.date.split('-')[2], 10)), 0);
-  const maxDayPurchases = Math.max(...costsData.filter(d => d.cumulative_purchases != null).map(d => parseInt(d.date.split('-')[2], 10)), 0);
-  const daysInMonth = 31;
-  const result = [];
-  for (let day = 1; day <= daysInMonth; day++) {
-    const entry = costsData.find(d => parseInt(d.date.split('-')[2], 10) === day) || {};
-    result.push({
-      day,
-      cumulative_cost_of_sales: (day <= maxDayCostOfSales) ? (entry.cumulative_cost_of_sales ?? null) : null,
-      cumulative_purchases: (day <= maxDayPurchases) ? (entry.cumulative_purchases ?? null) : null,
-    });
-  }
-  return result;
-};
-
 function App() {
   // --- Calculate initial date values ---
   const today = new Date();
@@ -2260,17 +2242,18 @@ function App() {
             <div className="chart-container">
                <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost-of-Sales vs Purchases</h3>
                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={processedMonthlyCumulativeCosts} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <LineChart data={monthlyCumulativeCosts} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
                         <XAxis 
-                            dataKey="day"
+                            dataKey="date" 
+                            tickFormatter={d => d.split('-')[2]} 
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
                             tickLine={false} 
                             axisLine={{ stroke: CHART_AXIS_COLOR}} 
-                            interval="preserveStartEnd"
+                            interval={1}
                         />
                         <YAxis 
-                            tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                            tickFormatter={formatCurrency} // Revert to full currency format
                             width={60} 
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
                             tickLine={false} 
@@ -2278,25 +2261,25 @@ function App() {
                         />
                         <Tooltip 
                             formatter={(value, name) => [formatCurrency(value), name.replace('cumulative_', '').replace('_', ' ')]}
-                            labelFormatter={label => `Day ${label}`}
+                            labelFormatter={(label) => new Date(label + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric'})} 
                             contentStyle={{ 
-                              backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                              borderColor: getCssVar('--border-color'),
-                              borderRadius: '0.375rem'
+                                backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                                borderColor: getCssVar('--border-color'),
+                                borderRadius: '0.375rem'
                             }}
                             itemStyle={{ textTransform: 'capitalize' }}
                             labelStyle={{ color: CHART_AXIS_COLOR }} 
                         />
                         <Legend 
                             wrapperStyle={{ fontSize: 'var(--text-sm)', paddingTop: '10px'}} 
-                            formatter={value => value.replace('cumulative_', '').replace('_', ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase())}
+                            formatter={(value) => value.replace('cumulative_', '').replace('_', ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase())}
                         />
                         <Line 
                             name="Cost of Sales"
                             type="monotone" 
                             dataKey="cumulative_cost_of_sales" 
                             stroke={CHART_BAR_PRIMARY}
-                            strokeWidth={3}
+                            strokeWidth={3} // Match thickness
                             dot={false} 
                             activeDot={{ r: 6, strokeWidth: 0, fill: getCssVar('--accent-primary-hover') }}
                         />
@@ -2305,7 +2288,7 @@ function App() {
                             type="monotone" 
                             dataKey="cumulative_purchases" 
                             stroke="#f1f1f1"
-                            strokeWidth={3}
+                            strokeWidth={3} // Match thickness
                             dot={false} 
                             activeDot={{ r: 6, strokeWidth: 0, fill: '#f1f1f1' }}
                         />
