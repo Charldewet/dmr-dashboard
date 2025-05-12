@@ -688,7 +688,7 @@ function App() {
   
   // Updated merge function for TWO CUMULATIVE datasets
   const mergeCumulativeComparisonData = (currentCumulative, previousCumulative) => {
-    // Data is already { day: D, cumulative_turnover: V }
+    // Find the last day with data for current year
     const maxDayCurrent = Math.max(...currentCumulative.map(d => d.day), 0);
     const maxDayPrevious = Math.max(...previousCumulative.map(d => d.day), 0);
     const maxDay = Math.max(maxDayCurrent, maxDayPrevious);
@@ -700,8 +700,8 @@ function App() {
     for (let day = 1; day <= maxDay; day++) {
       const currentEntry = currentCumulative.find(d => d.day === day);
       const previousEntry = previousCumulative.find(d => d.day === day);
-      
-      // Carry forward last known cumulative value if no entry for the current day
+
+      // Only carry forward for previous, not for current
       if (currentEntry) {
         lastCurrentCumulative = currentEntry.cumulative_turnover;
       }
@@ -711,8 +711,8 @@ function App() {
 
       merged.push({
         day: day,
-        current_cumulative_turnover: currentEntry?.cumulative_turnover || lastCurrentCumulative,
-        previous_cumulative_turnover: previousEntry?.cumulative_turnover || lastPreviousCumulative,
+        current_cumulative_turnover: (day <= maxDayCurrent) ? (currentEntry?.cumulative_turnover ?? null) : null,
+        previous_cumulative_turnover: previousEntry?.cumulative_turnover ?? lastPreviousCumulative,
       });
     }
     if (maxDay === 0 && currentCumulative.length === 0 && previousCumulative.length === 0) {
