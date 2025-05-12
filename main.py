@@ -331,9 +331,9 @@ def fetch_latest_report(pharmacy='reitz'):
         print("Please set GMAIL_USERNAME, GMAIL_APP_PASSWORD, REPORT_SENDER, and REPORT_SUBJECT in .env file.")
         return 0 # Return 0 days added
 
-    # --- Calculate date range for the last 7 days --- 
+    # --- Calculate date range for the last 14 days --- 
     end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=6) # Today minus 6 days = 7 days total
+    start_date = end_date - datetime.timedelta(days=13) # Today minus 13 days = 14 days total
     since_str = start_date.strftime('%d-%b-%Y')
     # Optional: Add a BEFORE clause for precision (day after end_date)
     # before_str = (end_date + datetime.timedelta(days=1)).strftime('%d-%b-%Y')
