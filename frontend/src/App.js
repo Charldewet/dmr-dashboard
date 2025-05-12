@@ -174,6 +174,24 @@ function InfoIcon() {
   );
 }
 
+// Helper to process cumulative costs so the line stops at the last data point
+const processMonthlyCumulativeCosts = (costsData) => {
+  if (!Array.isArray(costsData) || costsData.length === 0) return [];
+  const maxDayCostOfSales = Math.max(...costsData.filter(d => d.cumulative_cost_of_sales != null).map(d => parseInt(d.date.split('-')[2], 10)), 0);
+  const maxDayPurchases = Math.max(...costsData.filter(d => d.cumulative_purchases != null).map(d => parseInt(d.date.split('-')[2], 10)), 0);
+  const daysInMonth = 31;
+  const result = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const entry = costsData.find(d => parseInt(d.date.split('-')[2], 10) === day) || {};
+    result.push({
+      day,
+      cumulative_cost_of_sales: (day <= maxDayCostOfSales) ? (entry.cumulative_cost_of_sales ?? null) : null,
+      cumulative_purchases: (day <= maxDayPurchases) ? (entry.cumulative_purchases ?? null) : null,
+    });
+  }
+  return result;
+};
+
 function App() {
   // --- Calculate initial date values ---
   const today = new Date();
