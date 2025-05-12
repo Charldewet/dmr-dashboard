@@ -19,8 +19,7 @@ dotenv_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path)
 
 # Database configuration
-# Use /data as the default for persistent storage on Render
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:////data/reports.db')
+DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{os.path.join(BASE_DIR, 'reports.db')}")
 engine = create_engine(DATABASE_URL, echo=False, future=True) # Keep future=True if using SQLAlchemy 1.4+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()

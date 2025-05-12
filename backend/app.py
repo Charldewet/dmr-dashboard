@@ -68,17 +68,18 @@ def load_user(user_id):
 
 # --- Pharmacy DB mapping ---
 PHARMACY_DB_MAP = {
-    'reitz': '/data/reports.db',
-    'villiers': '/data/reports_villiers.db',
-    'roos': '/data/reports_roos.db',
-    'tugela': '/data/reports_tugela.db',
-    'winterton': '/data/reports_winterton.db',
+    'reitz': 'reports.db',
+    'villiers': 'reports_villiers.db',
+    'roos': 'reports_roos.db',
+    'tugela': 'reports_tugela.db',
+    'winterton': 'reports_winterton.db',
 }
 
 def get_pharmacy_session():
     pharmacy = request.headers.get('X-Pharmacy', 'reitz').lower()
-    db_file = PHARMACY_DB_MAP.get(pharmacy, '/data/reports.db')
-    db_url = f"sqlite:///{db_file}"
+    db_file = PHARMACY_DB_MAP.get(pharmacy, 'reports.db')
+    db_path = os.path.join(os.path.dirname(__file__), '..', db_file)
+    db_url = f"sqlite:///{os.path.abspath(db_path)}"
     engine = create_engine(db_url, echo=False, future=True)
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)()
 
