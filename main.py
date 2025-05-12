@@ -303,20 +303,20 @@ def load_pharmacy_env(pharmacy):
         'winterton': '.env.winterton',
     }
     env_file = env_map.get(pharmacy, '.env.reitz')
+    print(f"Loading env file: {env_file} for pharmacy: {pharmacy}")  # DEBUG PRINT
     load_dotenv(env_file, override=True)
 
 
 def get_pharmacy_session(pharmacy):
     db_map = {
-        'reitz': 'reports.db',
-        'villiers': 'reports_villiers.db',
-        'roos': 'reports_roos.db',
-        'tugela': 'reports_tugela.db',
-        'winterton': 'reports_winterton.db',
+        'reitz': '/data/reports.db',
+        'villiers': '/data/reports_villiers.db',
+        'roos': '/data/reports_roos.db',
+        'tugela': '/data/reports_tugela.db',
+        'winterton': '/data/reports_winterton.db',
     }
-    db_file = db_map.get(pharmacy, 'reports.db')
-    db_path = os.path.join(BASE_DIR, db_file)
-    db_url = f"sqlite:///{os.path.abspath(db_path)}"
+    db_file = db_map.get(pharmacy, '/data/reports.db')
+    db_url = f"sqlite:///{db_file}"
     engine = create_engine(db_url, echo=False, future=True)
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)()
 
