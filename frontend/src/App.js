@@ -1486,11 +1486,26 @@ function App() {
           {/* Find the label for the selected pharmacy */}
           <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
          </div>
-         <nav className="dashboard-nav">
-         <select
+         {/* Hamburger icon for mobile */}
+         <button
+           className="hamburger-menu-btn"
+           aria-label="Open navigation menu"
+           onClick={() => setMobileNavOpen(v => !v)}
+           style={{ display: 'none' }}
+         >
+           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="14" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="21" width="32" height="3.5" rx="1.75" fill="#fff"/>
+           </svg>
+         </button>
+         {/* Navigation: normal on desktop, overlay on mobile if open */}
+         <nav className={`dashboard-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
+           {/* ... existing nav content ... */}
+           <select
               value={selectedPharmacy}
               onChange={e => setSelectedPharmacy(e.target.value)}
-              disabled={isRestrictedUser} // Disable if user is restricted
+              disabled={isRestrictedUser}
               style={{
                 marginRight: '0.75rem',
                 padding: '0.5rem 1rem',
@@ -1499,17 +1514,10 @@ function App() {
                 background: '#232b3b',
                 color: '#fff',
                 border: '1px solid #374151',
-                cursor: isRestrictedUser ? 'not-allowed' : 'pointer', // Change cursor style when disabled
-                opacity: isRestrictedUser ? 0.6 : 1 // Visually dim the dropdown when disabled
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer',
+                opacity: isRestrictedUser ? 0.6 : 1
               }}
             >
-              {/* 
-                --- ADJUSTMENT: Always filter options based on allowedPharmacies if available ---
-                Filter options:
-                - If allowedPharmacies state is populated, show only those options.
-                - Otherwise (e.g., before auth check completes), show all options.
-                The 'disabled' attribute separately handles disabling the dropdown for Mauritz/Elani.
-              */}
               {(allowedPharmacies.length > 0
                 ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
                 : PHARMACY_OPTIONS
@@ -1539,7 +1547,7 @@ function App() {
             </button>
             <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
-                onClick={handleUpdateClick} // Assuming handleUpdateClick is defined elsewhere
+                onClick={handleUpdateClick}
                 className="button button-update" 
               >
                 Update
@@ -1552,6 +1560,8 @@ function App() {
               </button>
             </div>
          </nav>
+         {/* Mobile nav overlay background */}
+         {mobileNavOpen && <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}></div>}
       </header>
 
       {/* NEW: Status Text Positioned Below Header */}

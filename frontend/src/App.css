@@ -1253,3 +1253,61 @@ html, body {
 
   /* Further mobile adjustments can be added */
 }
+
+/* --- Hamburger Menu Styles --- */
+.hamburger-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  z-index: 1002;
+}
+.hamburger-menu-btn svg rect {
+  transition: fill 0.2s;
+}
+
+/* Overlay for mobile nav */
+.mobile-nav-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+}
+
+/* Mobile nav open state */
+.dashboard-nav.mobile-open {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  top: 0; right: 0; left: 0;
+  background: var(--surface-primary);
+  z-index: 1001;
+  padding: 2.5rem 1.5rem 1.5rem 1.5rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  border-radius: 0 0 1.5rem 1.5rem;
+  animation: slideDownNav 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideDownNav {
+  from { transform: translateY(-40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 767px) {
+  .hamburger-menu-btn {
+    display: block;
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+  }
+  .dashboard-nav {
+    display: none;
+  }
+  .dashboard-nav.mobile-open {
+    display: flex !important;
+  }
+  body.mobile-nav-open {
+    overflow: hidden;
+  }
+}
