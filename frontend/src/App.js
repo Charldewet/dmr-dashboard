@@ -1610,7 +1610,7 @@ function App() {
            </div>
 
           {/* Updated KPI Row (using dashboardMonthlyAgg) */}
-          <div className="kpis-grid kpis-grid--dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--gap-cards)' }}>
+          <div className="kpis-grid kpis-grid--dashboard">
             {/* Removed Transactions KPI card */}
             <div className="kpi-card">
               <div className="kpi-label">Turnover</div>
