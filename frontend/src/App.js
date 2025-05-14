@@ -1529,22 +1529,22 @@ function App() {
               ))}
             </select>
             <button
-                onClick={() => setView('dashboard')}
+                onClick={() => { setView('dashboard'); setMobileNavOpen(false); }}
                 className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
                 Dashboard 
             </button>
             <button
-                onClick={() => setView('monthly')}
+                onClick={() => { setView('monthly'); setMobileNavOpen(false); }}
                 className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
                 Monthly
             </button>
             <button
-                onClick={() => setView('yearly')}
+                onClick={() => { setView('yearly'); setMobileNavOpen(false); }}
                 className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
                 Yearly
             </button>
             <button
-                onClick={() => setView('stock')}
+                onClick={() => { setView('stock'); setMobileNavOpen(false); }}
                 className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
                 Stock
             </button>
@@ -1962,9 +1962,9 @@ function App() {
                         <div className="kpi-label">Purchases</div>
                         <div className="kpi-value">{formatCurrency(todayKPIs.purchases)}</div>
             </div>
-          </div>
-              </div>
             </div>
+        </div>
+      </div>
             
             <div className="donut-chart-container">
                 <div className="chart-container chart-container--donut">
@@ -2006,7 +2006,7 @@ function App() {
                             />
                         </PieChart>
                     </ResponsiveContainer>
-              </div>
+        </div>
             </div>
           </div>
 
@@ -2072,7 +2072,7 @@ function App() {
                   </BarChart>
         )}
       </ResponsiveContainer>
-    </div>
+            </div>
         </section>
       )}
 
@@ -2187,7 +2187,7 @@ function App() {
                             />
                         </PieChart>
       </ResponsiveContainer>
-    </div>
+              </div>
             </div>
           </div>
 
@@ -2197,21 +2197,21 @@ function App() {
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={processedMonthlyCumulativeComparison} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}> 
                         <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
-            <XAxis 
+                    <XAxis 
                             dataKey="day"
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-              tickLine={false} 
+                      tickLine={false} 
                             axisLine={{ stroke: CHART_AXIS_COLOR}} 
                             interval="preserveStartEnd"
-            />
-            <YAxis 
-              tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
-                            width={60} 
+                    />
+                    <YAxis 
+                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                      width={60}
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-              tickLine={false} 
-              axisLine={false} 
-            />
-            <Tooltip
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip
                             formatter={(value, name) => {
                                 const formattedValue = formatCurrency(value);
                                 if (name === 'Cumulative (Current)') return [formattedValue, 'Cumulative (Current)'];
@@ -2219,13 +2219,13 @@ function App() {
                                 return [formattedValue, name];
                             }}
                             labelFormatter={(label) => `Day ${label}`} 
-              contentStyle={{ 
-                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                  borderColor: getCssVar('--border-color'),
-                  borderRadius: '0.375rem'
-              }}
-              itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
-              labelStyle={{ color: CHART_AXIS_COLOR }}
+                      contentStyle={{ 
+                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                          borderColor: getCssVar('--border-color'),
+                          borderRadius: '0.375rem'
+                      }}
+                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+                      labelStyle={{ color: CHART_AXIS_COLOR }}
             />
                         <Legend 
                             wrapperStyle={{ fontSize: 'var(--text-sm)', paddingTop: '10px'}} 
@@ -2257,80 +2257,80 @@ function App() {
                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={monthlyCumulativeCosts} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
-        <XAxis 
+            <XAxis 
                             dataKey="date" 
                             tickFormatter={d => d.split('-')[2]} 
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-          tickLine={false} 
+              tickLine={false} 
                             axisLine={{ stroke: CHART_AXIS_COLOR}} 
                             interval={1}
-        />
-        <YAxis 
+            />
+            <YAxis 
                             tickFormatter={formatCurrency} // Revert to full currency format
                             width={60} 
                             tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip
+              tickLine={false} 
+              axisLine={false} 
+            />
+            <Tooltip
                             formatter={(value, name) => [formatCurrency(value), name.replace('cumulative_', '').replace('_', ' ')]}
                             labelFormatter={(label) => new Date(label + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric'})} 
-          contentStyle={{ 
-              backgroundColor: getCssVar('--chart-tooltip-bg'), 
-              borderColor: getCssVar('--border-color'),
-              borderRadius: '0.375rem'
-          }}
+              contentStyle={{ 
+                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                  borderColor: getCssVar('--border-color'),
+                  borderRadius: '0.375rem'
+              }}
                             itemStyle={{ textTransform: 'capitalize' }}
-                            labelStyle={{ color: CHART_AXIS_COLOR }} 
-                        />
+              labelStyle={{ color: CHART_AXIS_COLOR }}
+            />
                         <Legend 
                             wrapperStyle={{ fontSize: 'var(--text-sm)', paddingTop: '10px'}} 
                             formatter={(value) => value.replace('cumulative_', '').replace('_', ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase())}
         />
-        <Line 
+            <Line 
                             name="Cost of Sales"
-          type="monotone" 
+              type="monotone" 
                             dataKey="cumulative_cost_of_sales" 
                             stroke={CHART_BAR_PRIMARY}
                             strokeWidth={3} // Match thickness
-          dot={false}
+              dot={false}
                             activeDot={{ r: 6, strokeWidth: 0, fill: getCssVar('--accent-primary-hover') }}
-                        />
-                        <Line 
+            />
+            <Line 
                             name="Purchases"
-                            type="monotone" 
+              type="monotone" 
                             dataKey="cumulative_purchases" 
                             stroke="#f1f1f1"
                             strokeWidth={3} // Match thickness
-                            dot={false} 
+              dot={false}
                             activeDot={{ r: 6, strokeWidth: 0, fill: '#f1f1f1' }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+            />
+          </LineChart>
+      </ResponsiveContainer>
+    </div>
   </div>
-            </div>
 
           <div className="chart-container" style={{marginTop: 'var(--gap-cards)'}}> 
             <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Daily Performance</h3>
             <ResponsiveContainer width="100%" height={250}>
                 {Array.isArray(monthlyData) && monthlyData.length > 0 && ( 
                   <ComposedChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
-                    <XAxis 
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+        <XAxis 
                       dataKey="day" 
                       tickFormatter={d => d} 
-                      interval={0} 
-                      tickLine={false} 
-                      axisLine={false} 
+          interval={0} 
+          tickLine={false} 
+          axisLine={false} 
                       tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-                    />
-                    <YAxis 
+        />
+        <YAxis 
                       yAxisId="left"
                       orientation="left"
                       tickFormatter={value => `R${(value/1000)}k`} 
                       width={50} 
-                      tickLine={false} 
-                      axisLine={false} 
+          tickLine={false}
+          axisLine={false}
                       tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
                     />
                     <YAxis 
@@ -2341,15 +2341,15 @@ function App() {
                       tickLine={false}
                       axisLine={false}
                       tick={{ fill: CHART_AXIS_COLOR, fontSize: '0.7rem' }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'transparent' }}
-                      contentStyle={{ 
-                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                          borderColor: getCssVar('--border-color'),
-                          borderRadius: '0.375rem'
-                      }}
-                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+        />
+        <Tooltip
+          cursor={{ fill: 'transparent' }}
+          contentStyle={{ 
+              backgroundColor: getCssVar('--chart-tooltip-bg'), 
+              borderColor: getCssVar('--border-color'),
+              borderRadius: '0.375rem'
+          }}
+          itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
                       labelStyle={{ color: CHART_AXIS_COLOR }}
                       formatter={(value, name) => {
                          if (name === 'Daily Turnover') return [formatCurrency(value), 'Daily Turnover'];
@@ -2368,11 +2368,11 @@ function App() {
                   />
               ))}
             </Bar>
-            <Line 
+        <Line 
               yAxisId="right"
-              type="monotone" 
-              dataKey="avgBasketValueReported" 
-              name="Avg Basket Value" 
+          type="monotone" 
+          dataKey="avgBasketValueReported" 
+          name="Avg Basket Value" 
                       stroke={chartColors.selected}
                       strokeWidth={3} // Match thickness
                       dot={{ r: 4, strokeWidth: 1, fill: chartColors.selected }}
@@ -2380,8 +2380,8 @@ function App() {
                     />
           </ComposedChart>
         )}
-      </ResponsiveContainer>
-    </div>
+    </ResponsiveContainer>
+  </div>
         </section>
       )}
 
@@ -2575,7 +2575,7 @@ function App() {
                             </span>
                           </div>
                         );
-            } else {
+              } else {
     return (
                           <div 
                             key={`${monthIndex}-${dayOfMonth}-empty`}
@@ -2622,7 +2622,7 @@ function App() {
   return (
                         <div key={`calc-yoy-${summary.month}`} className="yearly-summary-value yoy-growth" style={{ color }}>
                           {value}
-      </div>
+        </div>
                       );
                     })}
         </div>
@@ -2927,7 +2927,7 @@ function App() {
 
                       const cellClass = isValidDate ? 'stock-bubble-grid-cell' : 'stock-bubble-grid-cell invalid';
 
-                      return (
+  return (
                         <div key={`${month}-${day}`} className={cellClass}>
                           {isValidDate && (purchaseRadius > 0 || cosRadius > 0 || purchaseBarHeight > 0 || cosBarHeight > 0) && ( 
                             <svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`} >
@@ -2974,29 +2974,29 @@ function App() {
                                  <title>{`Day ${day}\nPurchases: ${formatCurrency(purchaseValue)}`}</title> 
                                 </rect>
                               )}
-                            </svg>
+           </svg>
                           )}
-                        </div>
+            </div>
                       );
                   });
                 })()} 
              </div>
-          </div>
+           </div>
           {/* NEW: Legend for Stock Chart */}
           <div className="stock-legend" style={{ marginTop: '0.5rem' }}> {/* Add small top margin */} 
              <div className="stock-legend-item">
                <span className="stock-legend-color-swatch" style={{ backgroundColor: 'rgba(255, 69, 0, 0.8)' }}></span>
                Purchases
-             </div>
+            </div>
              <div className="stock-legend-item">
                <span className="stock-legend-color-swatch" style={{ backgroundColor: '#CCCCCC' }}></span>
                Cost of Sales
-             </div>
-           </div>
+            </div>
+          </div>
 
         </section>
       )}
-    </div>
+              </div>
   );
 }
 
