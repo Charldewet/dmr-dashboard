@@ -1464,9 +1464,10 @@ function App() {
   // --- Render Main Dashboard (Only if logged in) --- 
   return (
     <div className="dashboard-container">
+      <div className="rotate-overlay">Please rotate your device to landscape to use the dashboard.</div>
       {/* --- Custom Alert Box --- */}
       {alertInfo.isVisible && (
-        <div className={`custom-alert alert-${alertInfo.type}`}>
+        <div className={`custom-alert alert-${alertInfo.type}`}> 
           {alertInfo.message}
           <button 
             className="alert-close-button" 
