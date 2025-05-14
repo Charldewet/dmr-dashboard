@@ -2112,7 +2112,7 @@ function App() {
 
           <div className="top-row-layout">
             <div className="kpi-grid-container">
-                <div className="kpis-grid kpis-grid--daily">
+                <div className="kpis-grid kpis-grid--monthly">
                     <div className="kpi-column">
                       <div className="kpi-card">
                         <div className="kpi-label">Total Turnover (Month)</div>
@@ -2672,7 +2672,7 @@ function App() {
 
           {/* --- 5 Real Stock KPI Cards at the Top --- */}
           <div className="kpi-grid-container" style={{ marginBottom: 'var(--gap-cards)' }}>
-            <div className="kpis-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+            <div className="kpis-grid kpis-grid--stock">
               <div className="kpi-card">
                 <div className="kpi-label">Opening Stock</div>
                 <div className="kpi-value">{formatCurrency(stockKPIs.opening_stock)}</div>
