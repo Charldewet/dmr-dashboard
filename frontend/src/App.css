@@ -1393,7 +1393,7 @@ html, body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 950px) {
   .hamburger-menu-btn {
     display: block;
     position: absolute;
