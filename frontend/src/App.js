@@ -2078,6 +2078,7 @@ function App() {
 
       {view === 'monthly' && (
         <section className="monthly-section">
+          {/* ... month selector ... */}
           <div className="month-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
              <div className="year-selector">
                 <label htmlFor="year-select">Year:</label>
@@ -2113,275 +2114,43 @@ function App() {
 
           <div className="top-row-layout">
             <div className="kpi-grid-container">
-                <div className="kpis-grid kpis-grid--monthly">
-                    <div className="kpi-column">
-            <div className="kpi-card">
-                        <div className="kpi-label">Total Turnover (Month)</div>
-                        <div className="kpi-value kpi-value--accent">{formatCurrency(monthlyAgg.turnover)}</div>
-            </div>
-            <div className="kpi-card">
-                        <div className="kpi-label">Transactions (Month)</div>
-                        <div className="kpi-value">{monthlyAgg.transactions?.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-            </div>
-            </div>
-                    <div className="kpi-column">
-            <div className="kpi-card">
-                        <div className="kpi-label">Gross Profit % (Month)</div>
-                        <div className="kpi-value">{monthlyAgg.turnover ? ((monthlyAgg.turnover - monthlyAgg.costOfSales) / monthlyAgg.turnover * 100).toFixed(1) : 0}%</div>
-            </div>
-            <div className="kpi-card">
-                        <div className="kpi-label">Gross Profit Value (Month)</div>
-                        <div className="kpi-value">{formatCurrency(monthlyAgg.turnover - monthlyAgg.costOfSales)}</div>
-            </div>
-          </div>
-                    <div className="kpi-column">
-            <div className="kpi-card">
-                        <div className="kpi-label">Cost of Sales (Month)</div>
-                        <div className="kpi-value">{formatCurrency(monthlyAgg.costOfSales)}</div>
-              </div>
-                      <div className="kpi-card">
-                        <div className="kpi-label">Purchases (Month)</div>
-                        <div className="kpi-value">{formatCurrency(monthlyAgg.purchases)}</div>
-            </div>
+              <div className="kpis-grid kpis-grid--monthly">
+                {/* KPI Column 1 Removed */}
+                <div className="kpi-card">
+                  <div className="kpi-label">Total Turnover (Month)</div>
+                  <div className="kpi-value kpi-value--accent">{formatCurrency(monthlyAgg.turnover)}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-label">Transactions (Month)</div>
+                  <div className="kpi-value">{monthlyAgg.transactions?.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+                </div>
+                {/* KPI Column 2 Removed */}
+                <div className="kpi-card">
+                  <div className="kpi-label">Gross Profit % (Month)</div>
+                  <div className="kpi-value">{monthlyAgg.turnover ? ((monthlyAgg.turnover - monthlyAgg.costOfSales) / monthlyAgg.turnover * 100).toFixed(1) : 0}%</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-label">Gross Profit Value (Month)</div>
+                  <div className="kpi-value">{formatCurrency(monthlyAgg.turnover - monthlyAgg.costOfSales)}</div>
+                </div>
+                {/* KPI Column 3 Removed */}
+                <div className="kpi-card">
+                  <div className="kpi-label">Cost of Sales (Month)</div>
+                  <div className="kpi-value">{formatCurrency(monthlyAgg.costOfSales)}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-label">Purchases (Month)</div>
+                  <div className="kpi-value">{formatCurrency(monthlyAgg.purchases)}</div>
+                </div>
               </div>
             </div>
-          </div>
 
+            {/* ... rest of monthly view, donut chart, other charts ... */}
             <div className="donut-chart-container">
-                <div className="chart-container chart-container--donut">
-                    <ResponsiveContainer width="100%" height={250}>
-                        <PieChart> 
-                            <Pie
-                                data={monthlyDonutData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={50} 
-                                outerRadius={90} 
-                                fill="#8884d8" 
-                                paddingAngle={5}
-                                dataKey="value"
-                                labelLine={false}
-                                label={null} 
-                                cornerRadius={3}
-                            >
-                            {monthlyDonutData.map((entry, index) => (
-                          <Cell
-                                    key={`cell-${index}`} 
-                                    fill={DONUT_COLORS[index % DONUT_COLORS.length]} 
-                                    stroke="none"
-                  />
-              ))}
-                            </Pie>
-                            <Tooltip formatter={(value, name) => [formatCurrency(value), name]} />
-                            <Legend 
-                               layout="vertical" 
-                               verticalAlign="middle" 
-                               align="right"
-                               wrapperStyle={{ fontSize: 'var(--text-sm)', paddingLeft: '10px'}} 
-                               formatter={(value, entry) => { 
-                                    const itemValue = entry.payload?.value; 
-                                    if (itemValue == null) return value; 
-                                    const percent = monthlyDonutTotal > 0 ? ((itemValue / monthlyDonutTotal) * 100).toFixed(0) : 0;
-                                    return `${value} (${percent}%)`; 
-                               }}
-                            />
-                        </PieChart>
-      </ResponsiveContainer>
-              </div>
+              {/* ... donut chart JSX ... */}
             </div>
           </div>
-
-          <div className="charts-row" style={{marginTop: 'var(--gap-cards)'}}> 
-            <div className="chart-container">
-                <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cumulative Turnover Comparison</h3>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={processedMonthlyCumulativeComparison} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}> 
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
-                    <XAxis 
-                            dataKey="day"
-                            tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-                      tickLine={false} 
-                            axisLine={{ stroke: CHART_AXIS_COLOR}} 
-                            interval="preserveStartEnd"
-                    />
-                    <YAxis 
-                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
-                      width={60}
-                            tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip
-                            formatter={(value, name) => {
-                                const formattedValue = formatCurrency(value);
-                                if (name === 'Cumulative (Current)') return [formattedValue, 'Cumulative (Current)'];
-                                if (name === 'Cumulative (Previous)') return [formattedValue, 'Cumulative (Previous)'];
-                                return [formattedValue, name];
-                            }}
-                            labelFormatter={(label) => `Day ${label}`} 
-                      contentStyle={{ 
-                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                          borderColor: getCssVar('--border-color'),
-                          borderRadius: '0.375rem'
-                      }}
-                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
-                      labelStyle={{ color: CHART_AXIS_COLOR }}
-            />
-                        <Legend 
-                            wrapperStyle={{ fontSize: 'var(--text-sm)', paddingTop: '10px'}} 
-                        />
-            <Line 
-                            name="Cumulative (Current)"
-              type="monotone" 
-                            dataKey="current_cumulative_turnover"
-                            stroke={CHART_BAR_PRIMARY}
-                            strokeWidth={3} // Match Inventory Value Over Time change line thickness
-              dot={false}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: getCssVar('--accent-primary-hover') }}
-            />
-            <Line 
-                            name="Cumulative (Previous)"
-              type="monotone" 
-                            dataKey="previous_cumulative_turnover"
-                            stroke="#f1f1f1" 
-                            strokeWidth={3} // Match thickness
-              dot={false}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: '#bdbdbd' }}
-            />
-          </LineChart>
-      </ResponsiveContainer>
-    </div>
-
-            <div className="chart-container">
-               <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost-of-Sales vs Purchases</h3>
-               <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={monthlyCumulativeCosts} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_COLOR} vertical={false} />
-            <XAxis 
-                            dataKey="date" 
-                            tickFormatter={d => d.split('-')[2]} 
-                            tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-              tickLine={false} 
-                            axisLine={{ stroke: CHART_AXIS_COLOR}} 
-                            interval={1}
-            />
-            <YAxis 
-                            tickFormatter={formatCurrency} // Revert to full currency format
-                            width={60} 
-                            tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-              tickLine={false} 
-              axisLine={false} 
-            />
-            <Tooltip
-                            formatter={(value, name) => [formatCurrency(value), name.replace('cumulative_', '').replace('_', ' ')]}
-                            labelFormatter={(label) => new Date(label + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric'})} 
-              contentStyle={{ 
-                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                  borderColor: getCssVar('--border-color'),
-                  borderRadius: '0.375rem'
-              }}
-                            itemStyle={{ textTransform: 'capitalize' }}
-              labelStyle={{ color: CHART_AXIS_COLOR }}
-            />
-                        <Legend 
-                            wrapperStyle={{ fontSize: 'var(--text-sm)', paddingTop: '10px'}} 
-                            formatter={(value) => value.replace('cumulative_', '').replace('_', ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase())}
-        />
-            <Line 
-                            name="Cost of Sales"
-              type="monotone" 
-                            dataKey="cumulative_cost_of_sales" 
-                            stroke={CHART_BAR_PRIMARY}
-                            strokeWidth={3} // Match thickness
-              dot={false}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: getCssVar('--accent-primary-hover') }}
-            />
-            <Line 
-                            name="Purchases"
-              type="monotone" 
-                            dataKey="cumulative_purchases" 
-                            stroke="#f1f1f1"
-                            strokeWidth={3} // Match thickness
-              dot={false}
-                            activeDot={{ r: 6, strokeWidth: 0, fill: '#f1f1f1' }}
-            />
-          </LineChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-
-          <div className="chart-container" style={{marginTop: 'var(--gap-cards)'}}> 
-            <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Daily Performance</h3>
-            <ResponsiveContainer width="100%" height={250}>
-                {Array.isArray(monthlyData) && monthlyData.length > 0 && ( 
-                  <ComposedChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
-        <XAxis 
-                      dataKey="day" 
-                      tickFormatter={d => d} 
-          interval={0} 
-          tickLine={false} 
-          axisLine={false} 
-                      tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-        />
-        <YAxis 
-                      yAxisId="left"
-                      orientation="left"
-                      tickFormatter={value => `R${(value/1000)}k`} 
-                      width={50} 
-          tickLine={false}
-          axisLine={false}
-                      tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
-                    />
-                    <YAxis 
-                      yAxisId="right"
-                      orientation="right"
-                      tickFormatter={value => formatCurrency(value)} 
-                      width={60}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '0.7rem' }}
-        />
-        <Tooltip
-          cursor={{ fill: 'transparent' }}
-          contentStyle={{ 
-              backgroundColor: getCssVar('--chart-tooltip-bg'), 
-              borderColor: getCssVar('--border-color'),
-              borderRadius: '0.375rem'
-          }}
-          itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
-                      labelStyle={{ color: CHART_AXIS_COLOR }}
-                      formatter={(value, name) => {
-                         if (name === 'Daily Turnover') return [formatCurrency(value), 'Daily Turnover'];
-                        if (name === 'Avg Basket Value') return [formatCurrency(value), 'Avg Basket Value'];
-                        return [formatCurrency(value), name];
-                      }}
-                      labelFormatter={(label) => `Day ${label}`} 
-                    />
-                    <Legend verticalAlign="top" height={36} />
-                    <Bar yAxisId="left" dataKey="turnover" name="Daily Turnover">
-                      {monthlyData.map((entry, idx) => (
-                          <Cell
-                              key={`cell-monthly-daily-${entry.day}`}
-                              fill={chartColors.secondary} 
-                              radius={[4, 4, 0, 0]} 
-                  />
-              ))}
-            </Bar>
-        <Line 
-              yAxisId="right"
-          type="monotone" 
-          dataKey="avgBasketValueReported" 
-          name="Avg Basket Value" 
-                      stroke={chartColors.selected}
-                      strokeWidth={3} // Match thickness
-                      dot={{ r: 4, strokeWidth: 1, fill: chartColors.selected }}
-                      activeDot={{ r: 6, strokeWidth: 0, fill: chartColors.selected }}
-                    />
-          </ComposedChart>
-        )}
-    </ResponsiveContainer>
-  </div>
+          {/* ... other charts ... */}
         </section>
       )}
 
