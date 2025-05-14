@@ -1806,27 +1806,26 @@ function App() {
   </div>
   {/* End 12-Month Rolling Window Bar Charts Row */}
 
-  {/* --- Daily Turnover Bar Chart (Dashboard) --- */}
-  <div className="chart-container" style={{ marginTop: '0.1rem', maxWidth: '100%' }}>
-    <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Daily Turnover (Selected Month)</h3>
+  {/* --- Avg Basket Value 12-Month Rolling Line Chart --- */}
+  <div className="chart-container" style={{ marginTop: 'var(--gap-cards)' }}>
+    <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Avg Basket Value (Last 12 Months)</h3>
     <ResponsiveContainer width="100%" height={220}>
-      {Array.isArray(monthlyData) && monthlyData.length > 0 ? (
-        <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+      <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
         <XAxis 
-            dataKey="day" 
-            tickFormatter={d => d}
+          dataKey="label" 
           interval={0} 
           tickLine={false} 
           axisLine={false} 
-            tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px', angle: -30, textAnchor: 'end'}} 
         />
         <YAxis 
-            tickFormatter={value => `R${(value/1000)}k`} 
-            width={50} 
+          domain={[0, 'dataMax']}
+          tickFormatter={value => `R${(value/1000000).toFixed(1)}M`}
+          width={65}
           tickLine={false}
           axisLine={false}
-            tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px'}}
         />
         <Tooltip
           cursor={{ fill: 'transparent' }}
@@ -1836,254 +1835,417 @@ function App() {
               borderRadius: '0.375rem'
           }}
           itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
-            labelStyle={{ color: CHART_AXIS_COLOR }}
-            formatter={(value, name) => name === 'avgBasketValueReported' ? [formatCurrency(value), 'Avg Basket Value'] : [formatCurrency(value), 'Turnover']}
-            labelFormatter={(label) => `Day ${label}`}
-          />
-          <Bar dataKey="turnover">
-            {monthlyData.map((entry, idx) => {
-              const currentYear = selectedYear;
-              const currentMonthIndex = month - 1;
-              const barDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(entry.day).padStart(2, '0')}`;
-              const selectedDateStr = `${selectedYear}-${String(month).padStart(2, '0')}-${String(entry.day).padStart(2, '0')}`;
-              const isSelected = barDateStr === selectedDateStr;
-              return (
-                <Cell
-                    key={`cell-dash-daily-${entry.day}`}
-                    fill={COLOR_GOLD}
-                    style={{ cursor: 'pointer' }}
-                    radius={[4, 4, 0, 0]} 
-                />
-              );
-            })}
-          </Bar>
+          labelStyle={{ color: COLOR_ELECTRIC_PURPLE }}
+          formatter={(value) => [formatCurrency(value), 'Avg Basket Value']} 
+        />
         <Line 
           type="monotone" 
           dataKey="avgBasketValueReported" 
           name="Avg Basket Value" 
           stroke={COLOR_ELECTRIC_PURPLE} 
-            strokeWidth={3}
+          strokeWidth={4}
           dot={false}
           activeDot={false}
         />
-          <Legend />
-        </BarChart>
-      ) : (
-        <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
-      )}
+        <Legend 
+          verticalAlign="bottom" 
+          iconType="circle" 
+          wrapperStyle={{ fontSize: '1.1rem', color: COLOR_ELECTRIC_PURPLE, paddingTop: 10 }} 
+        />
+      </LineChart>
     </ResponsiveContainer>
   </div>
 
-  {/* More dashboard content can go here */}
+  // --- Fetch monthly turnover data for DASHBOARD view (for daily turnover bar chart) ---
+  // REMOVE: This useEffect is no longer needed for the rolling window
+  /*
+  useEffect(() => {
+    if (view !== 'dashboard') return;
+    const year = selectedYear;
+    const monthStrPadded = String(month).padStart(2, '0');
+    const monthYearStr = `${year}-${monthStrPadded}`;
+    axios.get(`/api/month/${monthYearStr}/turnover`)
+      .then(res => setMonthlyData(res.data || []))
+      .catch(error => {
+        console.error("Error fetching monthly turnover data for dashboard view:", error);
+        setMonthlyData([]);
+      });
+  }, [view, selectedYear, month, selectedPharmacy]);
+  */
 
-        </section>
-      )}
+  // --- Check Authentication Status on Load ---
+    // --- Check Authentication Status on Load ---
+  useEffect(() => {
+    setIsLoadingAuth(true);
+    axios.get('/api/check_auth') // Use relative path if proxy is set
+      .then(res => {
+        if (res.data.isLoggedIn) {
+          const loggedInUsername = res.data.username;
+          const allowed = res.data.allowed_pharmacies || [];
+          console.log("Auth Check Response:", res.data); // Log response
 
-      {/* --- View Specific Sections --- */}
-      {view === 'daily' && (
-        <section className="daily-section">
-           <div className="daily-date-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
-              <div className="date-part-selector">
-                  <label htmlFor="daily-year-select">Year:</label>
-                  <select 
-                    id="daily-year-select"
-                    className="input" 
-                    value={selectedDate.getUTCFullYear()}
-                    onChange={e => handleYearChange(e.target.value)}
-                  >
-                    {[...Array(5)].map((_, i) => {
-                      const yearOption = currentYear - i;
-                      return <option key={yearOption} value={yearOption}>{yearOption}</option>;
-                    }).reverse()}
-                  </select>
-        </div>
+          setIsLoggedIn(true);
+          setCurrentUser(loggedInUsername);
+          setAllowedPharmacies(allowed);
 
-              <div className="date-part-selector">
-                 <label htmlFor="daily-month-select">Month:</label>
-           <select
-                   id="daily-month-select"
-                   className="input" 
-                   value={selectedDate.getUTCMonth()}
-                   onChange={e => handleMonthChange(e.target.value)}
-                 >
-                   {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => (
-                     <option key={monthName} value={index}>{monthName}</option>
-              ))}
-            </select>
-            </div>
+          // --- UPDATED: Explicitly check username for restriction ---
+          if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+            console.log(`User ${loggedInUsername} identified as restricted.`);
+            // Set restriction *first*
+            setIsRestrictedUser(true);
+            // Then force the pharmacy selection if appropriate
+            if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 console.log(`Forcing pharmacy to 'villiers' for restricted user ${loggedInUsername}.`);
+                 setSelectedPharmacy('villiers');
+            } else {
+                // Handle edge case: restricted user has unexpected allowed list
+                console.warn(`User ${loggedInUsername} is restricted but allowed list is not just ['villiers']:`, allowed);
+                const currentSelection = selectedPharmacy; // Capture current selection before potential change
+                const fallback = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                if (!allowed.includes(currentSelection)) {
+                    console.log(`Current selection ${currentSelection} invalid for restricted user ${loggedInUsername}. Resetting to ${fallback}`);
+                    setSelectedPharmacy(fallback);
+                } else {
+                     console.log(`Keeping valid pharmacy ${currentSelection} for restricted user ${loggedInUsername}`);
+                }
+            }
+          } else {
+            // User is Charl, Anmarie, or potentially others - NOT restricted
+            console.log(`User ${loggedInUsername} identified as unrestricted.`);
+             // Set restriction *first*
+            setIsRestrictedUser(false);
+            const currentSelection = selectedPharmacy; // Capture current selection
+            const defaultPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+            // Check if current selection is valid for unrestricted user after setting state
+            if ((allowed.length > 0 && !allowed.includes(currentSelection)) || (allowed.length === 0 && loggedInUsername)) {
+                 console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultPharmacy}`);
+                 setSelectedPharmacy(defaultPharmacy);
+            } else {
+                 console.log(`Keeping valid pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+            }
+          }
+          // --- End UPDATED ---
 
-              <div className="date-part-selector">
-                  <label htmlFor="daily-day-select">Day:</label>
-                <select 
-                    id="daily-day-select"
-                  className="input" 
-                    value={selectedDate.getUTCDate()}
-                    onChange={e => handleDayChange(e.target.value)}
-                  >
-                    {[...Array(getDaysInMonth(selectedDate))].map((_, i) => {
-                      const dayOption = i + 1;
-                      return <option key={dayOption} value={dayOption}>{dayOption}</option>;
-                    })}
-                </select>
-             </div>
-           </div>
+        } else {
+          // User is not logged in
+          console.log("Auth Check Response: Not Logged In");
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setAllowedPharmacies([]); // Clear restrictions on logout
+          setIsRestrictedUser(false);
+          // Optionally reset pharmacy selection on logout?
+          // setSelectedPharmacy(PHARMACY_OPTIONS[0].value);
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+        setIsLoggedIn(false); // Assume not logged in on error
+        setCurrentUser(null);
+        setAllowedPharmacies([]); // Clear restrictions on error
+        setIsRestrictedUser(false);
+      })
+      .finally(() => {
+        setIsLoadingAuth(false); // Finished loading auth status
+      });
+  // Dependency array is empty: run only once on mount
+  }, []);
 
-          <div className="top-row-layout">
-            <div className="kpi-grid-container">
-                <div className="kpis-grid kpis-grid--daily">
-                    <div className="kpi-column">
-            <div className="kpi-card">
-                        <div className="kpi-label">Total Turnover</div>
-                        <div className="kpi-value kpi-value--accent">{formatCurrency(todayKPIs.turnover)}</div>
-            </div>
-                      <div className="kpi-card">
-                        <div className="kpi-label">Transactions</div>
-                        <div className="kpi-value">{todayKPIs.transactions?.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                      </div>
-                    </div>
+  // --- Login/Logout Handlers ---
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError(''); // Clear previous errors
+    setIsLoadingAuth(true); // Show loading indicator during login process
+    try {
+      const loginResponse = await axios.post('/api/login', { 
+          username: loginUsername, 
+          password: loginPassword 
+      });
 
-                    <div className="kpi-column">
-            <div className="kpi-card">
-              <div className="kpi-label">Gross Profit %</div>
-                        <div className="kpi-value">{todayKPIs.gpPercent?.toFixed(1)}%</div>
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label">Gross Profit Value</div>
-                        <div className="kpi-value">{formatCurrency(todayKPIs.gpValue)}</div>
-            </div>
-                    </div>
+      if (loginResponse.status === 200) {
+        // Login successful, now immediately fetch auth details
+        console.log("Login POST successful. Fetching auth details...");
+        try {
+          const authResponse = await axios.get('/api/check_auth');
+          console.log("Auth Check Response (after login):", authResponse.data);
 
-                    <div className="kpi-column">
-            <div className="kpi-card">
-              <div className="kpi-label">Cost of Sales</div>
-                        <div className="kpi-value">{formatCurrency(todayKPIs.costOfSales)}</div>
+          if (authResponse.data && authResponse.data.isLoggedIn) {
+            const loggedInUsername = authResponse.data.username;
+            const allowed = authResponse.data.allowed_pharmacies || [];
+            
+            // Set all states together AFTER getting auth info
+            setAllowedPharmacies(allowed);
+            setCurrentUser(loggedInUsername);
+            
+            // Determine restriction and set related state
+            let restrictUser = false;
+            let defaultRestrictedPharmacy = null;
+
+            // --- ADJUSTMENT: Only Mauritz/Elani are strictly 'restricted' (dropdown disabled) ---
+            if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+              console.log(`User ${loggedInUsername} identified as strictly restricted (dropdown disabled).`);
+              restrictUser = true;
+              if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 defaultRestrictedPharmacy = 'villiers';
+              } else {
+                 console.warn(`Mauritz/Elani allowed list != ['villiers']:`, allowed);
+                 defaultRestrictedPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value; // Fallback
+              }
+            } else {
+              // Lize, Charl, Anmarie, etc. are not strictly restricted (dropdown enabled)
+              console.log(`User ${loggedInUsername} identified as not strictly restricted (dropdown enabled).`);
+              restrictUser = false;
+            }
+            // --- End ADJUSTMENT ---
+
+            // Set restriction state (only true for Mauritz/Elani now)
+            setIsRestrictedUser(restrictUser);
+
+            // Set selected pharmacy based on restriction
+            if (restrictUser) {
+                console.log(`Setting pharmacy to ${defaultRestrictedPharmacy} for restricted user ${loggedInUsername}.`);
+                setSelectedPharmacy(defaultRestrictedPharmacy);
+            } else {
+                 // Ensure selected pharmacy is valid for unrestricted user
+                 const currentSelection = selectedPharmacy; // Capture current selection
+                 const defaultUnrestricted = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                 if (!allowed.includes(currentSelection) && allowed.length > 0) { // Check allowed length > 0
+                    console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultUnrestricted}`);
+                    setSelectedPharmacy(defaultUnrestricted);
+                 } else {
+                     console.log(`Keeping pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+                 }
+            }
+
+            // Finally, set loggedIn and clear form
+            setIsLoggedIn(true); 
+            setLoginUsername('');
+            setLoginPassword('');
+
+          } else {
+             // This case should ideally not happen if login succeeded, but handle it defensively
+             console.error("Login succeeded but check_auth failed or reported not logged in.");
+             setLoginError('Login verification failed. Please try again.');
+             setIsLoggedIn(false);
+             setCurrentUser(null);
+             setAllowedPharmacies([]);
+             setIsRestrictedUser(false);
+          }
+        } catch (authError) {
+           console.error("Failed to fetch auth details after login:", authError);
+           setLoginError('Login verification failed. Please try again.');
+           setIsLoggedIn(false);
+           setCurrentUser(null);
+           setAllowedPharmacies([]);
+           setIsRestrictedUser(false);
+        }
+      } 
+      // No explicit else needed for loginResponse.status != 200, as axios throws for non-2xx
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setAllowedPharmacies([]); // Clear restrictions on login fail
+      setIsRestrictedUser(false);
+      if (error.response && error.response.data && error.response.data.error) {
+        setLoginError(error.response.data.error);
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    } finally {
+        setIsLoadingAuth(false); // Hide loading indicator
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      // Reset view or other state if needed
+      setView('dashboard'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Handle logout error if needed (e.g., show message)
+    }
+  };
+
+  // --- Existing Helper Functions & Data Preparation ---
+  // ... (formatCurrency, donut data, rolling window helpers, etc.)
+
+  // --- Conditional Rendering --- 
+
+  // Show loading indicator while checking auth status
+  if (isLoadingAuth) {
+    return <div className="loading-container">Checking authentication...</div>; 
+  }
+
+  if (!isLoggedIn) {
+    // --- Render TLC Brand Login Card with image background ---
+    return (
+      <div className="session">
+        <div className="login-center-wrapper">
+          <form className="log-in" autoComplete="off" onSubmit={e => { e.preventDefault(); handleLoginSubmit(e); }}>
+            <div className="login-welcome">
+              <div className="login-title-main">Welcome back</div>
+              <div className="login-title-sub">Login to view the dashboard</div>
             </div>
-            <div className="kpi-card">
-                        <div className="kpi-label">Purchases</div>
-                        <div className="kpi-value">{formatCurrency(todayKPIs.purchases)}</div>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input 
+                placeholder="Username" 
+                type="text" 
+                name="username" 
+                id="username" 
+                autoComplete="off"
+                value={loginUsername}
+                onChange={e => setLoginUsername(e.target.value)}
+                required
+              />
             </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input 
+                placeholder="Password" 
+                type="password" 
+                name="password" 
+                id="password" 
+                autoComplete="off"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                required
+              />
             </div>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="button login-button">Log in</button>
+          </form>
         </div>
       </div>
-            
-            <div className="donut-chart-container">
-                <div className="chart-container chart-container--donut">
-                    <ResponsiveContainer width="100%" height={250}>
-                         <PieChart> 
-                            <Pie
-                                data={dailyDonutData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={50} 
-                                outerRadius={90} 
-                                fill="#8884d8" 
-                                paddingAngle={5}
-                                dataKey="value"
-                                labelLine={false}
-                                label={null}
-                                cornerRadius={3}
-                            >
-                            {dailyDonutData.map((entry, index) => (
-                                <Cell 
-                                    key={`cell-${index}`} 
-                                    fill={DONUT_COLORS[index % DONUT_COLORS.length]} 
-                                    stroke="none" 
-                                />
-                            ))}
-                            </Pie>
-                            <Tooltip formatter={(value, name) => [formatCurrency(value), name]} />
-                            <Legend 
-                               layout="vertical" 
-                               verticalAlign="middle" 
-                               align="right"
-                               wrapperStyle={{ fontSize: 'var(--text-sm)', paddingLeft: '10px'}} 
-                               formatter={(value, entry) => { 
-                                    const itemValue = entry.payload?.value; 
-                                    if (itemValue == null) return value; 
-                                    const percent = dailyDonutTotal > 0 ? ((itemValue / dailyDonutTotal) * 100).toFixed(0) : 0; 
-                                    return `${value} (${percent}%)`; 
-                               }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+    );
+  }
+
+  // --- Render Main Dashboard (Only if logged in) --- 
+  return (
+    <div className="dashboard-container">
+      <div className="rotate-overlay">Please rotate your device to landscape to use the dashboard.</div>
+      {/* --- Custom Alert Box --- */}
+      {alertInfo.isVisible && (
+        <div className={`custom-alert alert-${alertInfo.type}`}> 
+          {alertInfo.message}
+          <button 
+            className="alert-close-button" 
+            onClick={() => setAlertInfo({ ...alertInfo, isVisible: false })}
+          >
+            &times;
+          </button>
         </div>
-            </div>
-          </div>
-
-          <div className="chart-container" style={{marginTop: 'var(--gap-cards)'}}>
-            <ResponsiveContainer width="100%" height={250}>
-                {Array.isArray(monthlyData) && monthlyData.length > 0 && ( 
-                  <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
-                    <XAxis 
-                      dataKey="day" 
-                      tickFormatter={d => d}
-                      interval={0} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
-                    />
-                    <YAxis 
-                      tickFormatter={value => `R${(value/1000)}k`} 
-                      width={50} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'transparent' }}
-                      contentStyle={{ 
-                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
-                          borderColor: getCssVar('--border-color'),
-                          borderRadius: '0.375rem'
-                      }}
-                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
-                      labelStyle={{ color: CHART_AXIS_COLOR }}
-                      formatter={(value, name) => name === 'avgBasketValueReported' ? [formatCurrency(value), 'Avg Basket Value'] : [formatCurrency(value), 'Turnover']}
-                      labelFormatter={(label) => `Day ${label}`}
-                    />
-                    <Bar dataKey="turnover">
-                      {monthlyData.map((entry, idx) => {
-                        const currentYear = selectedYear;
-                        const currentMonthIndex = month - 1;
-                        const barDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(entry.day).padStart(2, '0')}`;
-                        const selectedDateStr = `${selectedYear}-${String(month).padStart(2, '0')}-${String(entry.day).padStart(2, '0')}`;
-                        const isSelected = barDateStr === selectedDateStr;
-                        return (
-                          <Cell
-                              key={`cell-dash-daily-${entry.day}`}
-                              fill={COLOR_GOLD}
-                              style={{ cursor: 'pointer' }}
-                              radius={[4, 4, 0, 0]} 
-                  />
-                        );
-                      })}
-            </Bar>
-            <Line 
-              type="monotone" 
-              dataKey="avgBasketValueReported" 
-              name="Avg Basket Value" 
-              stroke={COLOR_ELECTRIC_PURPLE} 
-              strokeWidth={3}
-              dot={false}
-              activeDot={false}
-            />
-                    <Legend />
-                  </BarChart>
-        )}
-      </ResponsiveContainer>
-            </div>
-        </section>
       )}
+      {/* --- End Custom Alert Box --- */}
 
-      {view === 'monthly' && (
-        <section className="monthly-section">
-          {/* ... month selector ... */}
+      <header className="dashboard-header">
+         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* ... logo and title ... */}
+           <img 
+            src="/the-local-choice-logo.png" 
+            alt="TLC Logo" 
+            style={{ height: '60px' }}
+          />
+          {/* Find the label for the selected pharmacy */}
+          <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
+         </div>
+         {/* Hamburger icon for mobile */}
+         <button
+           className="hamburger-menu-btn"
+           aria-label="Open navigation menu"
+           onClick={() => setMobileNavOpen(v => !v)}
+         >
+           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="14" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="21" width="32" height="3.5" rx="1.75" fill="#fff"/>
+           </svg>
+         </button>
+         {/* Navigation: normal on desktop, overlay on mobile if open */}
+         <nav className={`dashboard-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
+           {/* ... existing nav content ... */}
+           <select
+              value={selectedPharmacy}
+              onChange={e => setSelectedPharmacy(e.target.value)}
+              disabled={isRestrictedUser}
+              style={{
+                marginRight: '0.75rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                background: '#232b3b',
+                color: '#fff',
+                border: '1px solid #374151',
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer',
+                opacity: isRestrictedUser ? 0.6 : 1
+              }}
+            >
+              {(allowedPharmacies.length > 0
+                ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
+                : PHARMACY_OPTIONS
+              ).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+                onClick={() => { setView('dashboard'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
+                Dashboard 
+            </button>
+            <button
+                onClick={() => { setView('monthly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
+                Monthly
+            </button>
+            <button
+                onClick={() => { setView('yearly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
+                Yearly
+            </button>
+            <button
+                onClick={() => { setView('stock'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
+                Stock
+            </button>
+            <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleUpdateClick}
+                className="button button-update" 
+              >
+                Update
+              </button>
+              <button
+                onClick={handleLogout}
+                className="button button-primary button-logout" 
+              >
+                Logout ({currentUser})
+              </button>
+            </div>
+         </nav>
+         {/* Mobile nav overlay background */}
+         {mobileNavOpen && <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}></div>}
+      </header>
+
+      {/* NEW: Status Text Positioned Below Header */}
+      <div style={{ width: '100%', textAlign: 'right', marginTop: '-8px' }}> {/* Increased negative marginTop */}
+        <span className="update-status-text">
+          Updated to: {latestDataDate}
+        </span>
+      </div>
+
+      {/* --- NEW: Dashboard View Section --- */}
+      {view === 'dashboard' && (
+        <section className="dashboard-view-section" style={{ padding: 'var(--padding-section-md) 0' }}>
+          {/* Updated Selectors: Year and Month Only */}
           <div className="month-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
              <div className="year-selector">
-                <label htmlFor="year-select">Year:</label>
+                <label htmlFor="dash-year-select">Year:</label>
                 <select 
-                  id="year-select"
+                  id="dash-year-select"
                   className="input" 
                   value={selectedYear}
                   onChange={e => setSelectedYear(parseInt(e.target.value, 10))}
@@ -2094,7 +2256,6 @@ function App() {
                   }).reverse()}
                 </select>
              </div>
-             
              <div className="month-buttons">
                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => {
                  const monthNumber = index + 1;
@@ -2112,54 +2273,642 @@ function App() {
              </div>
            </div>
 
-          <div className="top-row-layout">
-            <div className="kpi-grid-container">
-              <div className="kpis-grid kpis-grid--monthly">
-                {/* KPI Column 1 Removed */}
-                <div className="kpi-card">
-                  <div className="kpi-label">Total Turnover (Month)</div>
-                  <div className="kpi-value kpi-value--accent">{formatCurrency(monthlyAgg.turnover)}</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-label">Transactions (Month)</div>
-                  <div className="kpi-value">{monthlyAgg.transactions?.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
-                </div>
-                {/* KPI Column 2 Removed */}
-                <div className="kpi-card">
-                  <div className="kpi-label">Gross Profit % (Month)</div>
-                  <div className="kpi-value">{monthlyAgg.turnover ? ((monthlyAgg.turnover - monthlyAgg.costOfSales) / monthlyAgg.turnover * 100).toFixed(1) : 0}%</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-label">Gross Profit Value (Month)</div>
-                  <div className="kpi-value">{formatCurrency(monthlyAgg.turnover - monthlyAgg.costOfSales)}</div>
-                </div>
-                {/* KPI Column 3 Removed */}
-                <div className="kpi-card">
-                  <div className="kpi-label">Cost of Sales (Month)</div>
-                  <div className="kpi-value">{formatCurrency(monthlyAgg.costOfSales)}</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-label">Purchases (Month)</div>
-                  <div className="kpi-value">{formatCurrency(monthlyAgg.purchases)}</div>
-                </div>
-              </div>
+          {/* Updated KPI Row (using dashboardMonthlyAgg) */}
+          <div className="kpis-grid kpis-grid--dashboard">
+            {/* Removed Transactions KPI card */}
+            <div className="kpi-card">
+              <div className="kpi-label">Turnover</div>
+              <div className="kpi-value kpi-value--accent">{formatCurrency(dashboardMonthlyAgg.turnover) || '-'}</div>
             </div>
-
-            {/* ... rest of monthly view, donut chart, other charts ... */}
-            <div className="donut-chart-container">
-              {/* ... donut chart JSX ... */}
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit %</div>
+              <div className="kpi-value">{dashboardMonthlyAgg.turnover ? ((dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) / dashboardMonthlyAgg.turnover * 100).toFixed(1) : '0.0'}%</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit Value</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Cost of Sales</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Purchases </div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.purchases) || '-'}</div>
             </div>
           </div>
-          {/* ... other charts ... */}
-        </section>
-      )}
 
-      {view === 'yearly' && (
-        <section className="yearly-section">
-           <div className="year-selector" style={{ marginBottom: 'var(--gap-cards)' }}>
-              <label htmlFor="yearly-year-select">Year:</label>
+          {/* --- Secondary KPI Row (3 cards) --- */}
+          <div className="kpis-grid kpis-grid--dashboard-secondary" style={{ marginBottom: '0.5rem' }}>
+            <div className="kpi-card">
+            <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Transactions Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.transactions != null ? dashboardMonthlyAgg.transactions.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Scripts Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.totalScripts != null ? dashboardMonthlyAgg.totalScripts.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+              </div>
+            </div>
+            <div className="kpi-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <GaugeChart
+                value={
+                  (typeof dashboardMonthlyAgg.dispensaryTurnover === 'number' && typeof dashboardMonthlyAgg.turnover === 'number' && dashboardMonthlyAgg.turnover > 0)
+                    ? (dashboardMonthlyAgg.dispensaryTurnover / dashboardMonthlyAgg.turnover) * 100
+                    : 0
+                }
+                max={100}
+                color={COLOR_CHARTREUSE}
+                label={"Dispensary %"}
+              />
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Avg Basket Size</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketSizeReported != null ? dashboardMonthlyAgg.avgBasketSizeReported.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd', marginTop: 6 }}>Avg Basket Value</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketValueReported != null ? formatCurrency(dashboardMonthlyAgg.avgBasketValueReported) : '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* --- 12-Month Rolling Window Bar Charts Row --- */}
+          <div className="charts-row" style={{ marginTop: 'var(--gap-cards)' }}>
+            {/* Turnover Chart */}
+            <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+              <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+                {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+                  <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+                    <XAxis 
+                      dataKey="label" 
+                      interval={0} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                      width={50} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 'dataMax']}
+                      tickFormatter={value => value ? `R${Math.round(value)}` : ''}
+                      width={60}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '10px'}}
+                      // label removed
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{ 
+                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                          borderColor: getCssVar('--border-color'),
+                          borderRadius: '0.375rem'
+                      }}
+                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+                      labelStyle={{ color: CHART_AXIS_COLOR }}
+                      formatter={(value, name) => {
+                        if (name === 'Avg Basket Value') return [formatCurrency(value), 'Avg Basket Value'];
+                        if (name === 'Total Turnover') return [formatCurrency(value), 'Total Turnover'];
+                        return [formatCurrency(value), name];
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="total" name="Total Turnover">
+                      {/* UPDATE: Map over dashboardRolling12MonthsData */}
+                      {dashboardRolling12MonthsData.map((entry, idx) => (
+                          <Cell
+                              key={`cell-dash-rolling12-${entry.label}`}
+                              fill={COLOR_COQUELICOT} 
+                              radius={[4, 4, 0, 0]} 
+                  />
+              ))}
+            </Bar>
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="avgBasketValueReported" 
+              name="Avg Basket Value" 
+              stroke={COLOR_WHITE} 
+              strokeWidth={4}
+              dot={false}
+              activeDot={false}
+            />
+            <Legend />
+          </ComposedChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+    {/* Cost of Sales Chart (now LineChart) */}
+    <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+      <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
+      <ResponsiveContainer width="100%" height={220}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+            <XAxis 
+              dataKey="label" 
+              interval={0} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+            />
+            <YAxis 
+              tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+              width={50} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+            />
+            <Tooltip
+              cursor={{ fill: 'transparent' }}
+              contentStyle={{ 
+                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                  borderColor: getCssVar('--border-color'),
+                  borderRadius: '0.375rem'
+              }}
+              itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+              labelStyle={{ color: CHART_AXIS_COLOR }}
+              formatter={(value, name) => [formatCurrency(value), name === 'costOfSales' ? 'Cost of Sales' : 'Purchases']} 
+            />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="costOfSales" 
+              name="Cost of Sales" 
+              stroke={COLOR_GOLD} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="purchases" 
+              name="Purchases" 
+              stroke={COLOR_ELECTRIC_PURPLE} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+          </LineChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+  </div>
+  {/* End 12-Month Rolling Window Bar Charts Row */}
+
+  {/* --- Avg Basket Value 12-Month Rolling Line Chart --- */}
+  <div className="chart-container" style={{ marginTop: 'var(--gap-cards)' }}>
+    <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Avg Basket Value (Last 12 Months)</h3>
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+        <XAxis 
+          dataKey="label" 
+          interval={0} 
+          tickLine={false} 
+          axisLine={false} 
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px', angle: -30, textAnchor: 'end'}} 
+        />
+        <YAxis 
+          domain={[0, 'dataMax']}
+          tickFormatter={value => `R${(value/1000000).toFixed(1)}M`}
+          width={65}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px'}}
+        />
+        <Tooltip
+          cursor={{ fill: 'transparent' }}
+          contentStyle={{ 
+              backgroundColor: getCssVar('--chart-tooltip-bg'), 
+              borderColor: getCssVar('--border-color'),
+              borderRadius: '0.375rem'
+          }}
+          itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+          labelStyle={{ color: COLOR_ELECTRIC_PURPLE }}
+          formatter={(value) => [formatCurrency(value), 'Avg Basket Value']} 
+        />
+        <Line 
+          type="monotone" 
+          dataKey="avgBasketValueReported" 
+          name="Avg Basket Value" 
+          stroke={COLOR_ELECTRIC_PURPLE} 
+          strokeWidth={4}
+          dot={false}
+          activeDot={false}
+        />
+        <Legend 
+          verticalAlign="bottom" 
+          iconType="circle" 
+          wrapperStyle={{ fontSize: '1.1rem', color: COLOR_ELECTRIC_PURPLE, paddingTop: 10 }} 
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+
+  // --- Fetch monthly turnover data for DASHBOARD view (for daily turnover bar chart) ---
+  // REMOVE: This useEffect is no longer needed for the rolling window
+  /*
+  useEffect(() => {
+    if (view !== 'dashboard') return;
+    const year = selectedYear;
+    const monthStrPadded = String(month).padStart(2, '0');
+    const monthYearStr = `${year}-${monthStrPadded}`;
+    axios.get(`/api/month/${monthYearStr}/turnover`)
+      .then(res => setMonthlyData(res.data || []))
+      .catch(error => {
+        console.error("Error fetching monthly turnover data for dashboard view:", error);
+        setMonthlyData([]);
+      });
+  }, [view, selectedYear, month, selectedPharmacy]);
+  */
+
+  // --- Check Authentication Status on Load ---
+    // --- Check Authentication Status on Load ---
+  useEffect(() => {
+    setIsLoadingAuth(true);
+    axios.get('/api/check_auth') // Use relative path if proxy is set
+      .then(res => {
+        if (res.data.isLoggedIn) {
+          const loggedInUsername = res.data.username;
+          const allowed = res.data.allowed_pharmacies || [];
+          console.log("Auth Check Response:", res.data); // Log response
+
+          setIsLoggedIn(true);
+          setCurrentUser(loggedInUsername);
+          setAllowedPharmacies(allowed);
+
+          // --- UPDATED: Explicitly check username for restriction ---
+          if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+            console.log(`User ${loggedInUsername} identified as restricted.`);
+            // Set restriction *first*
+            setIsRestrictedUser(true);
+            // Then force the pharmacy selection if appropriate
+            if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 console.log(`Forcing pharmacy to 'villiers' for restricted user ${loggedInUsername}.`);
+                 setSelectedPharmacy('villiers');
+            } else {
+                // Handle edge case: restricted user has unexpected allowed list
+                console.warn(`User ${loggedInUsername} is restricted but allowed list is not just ['villiers']:`, allowed);
+                const currentSelection = selectedPharmacy; // Capture current selection before potential change
+                const fallback = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                if (!allowed.includes(currentSelection)) {
+                    console.log(`Current selection ${currentSelection} invalid for restricted user ${loggedInUsername}. Resetting to ${fallback}`);
+                    setSelectedPharmacy(fallback);
+                } else {
+                     console.log(`Keeping valid pharmacy ${currentSelection} for restricted user ${loggedInUsername}`);
+                }
+            }
+          } else {
+            // User is Charl, Anmarie, or potentially others - NOT restricted
+            console.log(`User ${loggedInUsername} identified as unrestricted.`);
+             // Set restriction *first*
+            setIsRestrictedUser(false);
+            const currentSelection = selectedPharmacy; // Capture current selection
+            const defaultPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+            // Check if current selection is valid for unrestricted user after setting state
+            if ((allowed.length > 0 && !allowed.includes(currentSelection)) || (allowed.length === 0 && loggedInUsername)) {
+                 console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultPharmacy}`);
+                 setSelectedPharmacy(defaultPharmacy);
+            } else {
+                 console.log(`Keeping valid pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+            }
+          }
+          // --- End UPDATED ---
+
+        } else {
+          // User is not logged in
+          console.log("Auth Check Response: Not Logged In");
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setAllowedPharmacies([]); // Clear restrictions on logout
+          setIsRestrictedUser(false);
+          // Optionally reset pharmacy selection on logout?
+          // setSelectedPharmacy(PHARMACY_OPTIONS[0].value);
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+        setIsLoggedIn(false); // Assume not logged in on error
+        setCurrentUser(null);
+        setAllowedPharmacies([]); // Clear restrictions on error
+        setIsRestrictedUser(false);
+      })
+      .finally(() => {
+        setIsLoadingAuth(false); // Finished loading auth status
+      });
+  // Dependency array is empty: run only once on mount
+  }, []);
+
+  // --- Login/Logout Handlers ---
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError(''); // Clear previous errors
+    setIsLoadingAuth(true); // Show loading indicator during login process
+    try {
+      const loginResponse = await axios.post('/api/login', { 
+          username: loginUsername, 
+          password: loginPassword 
+      });
+
+      if (loginResponse.status === 200) {
+        // Login successful, now immediately fetch auth details
+        console.log("Login POST successful. Fetching auth details...");
+        try {
+          const authResponse = await axios.get('/api/check_auth');
+          console.log("Auth Check Response (after login):", authResponse.data);
+
+          if (authResponse.data && authResponse.data.isLoggedIn) {
+            const loggedInUsername = authResponse.data.username;
+            const allowed = authResponse.data.allowed_pharmacies || [];
+            
+            // Set all states together AFTER getting auth info
+            setAllowedPharmacies(allowed);
+            setCurrentUser(loggedInUsername);
+            
+            // Determine restriction and set related state
+            let restrictUser = false;
+            let defaultRestrictedPharmacy = null;
+
+            // --- ADJUSTMENT: Only Mauritz/Elani are strictly 'restricted' (dropdown disabled) ---
+            if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+              console.log(`User ${loggedInUsername} identified as strictly restricted (dropdown disabled).`);
+              restrictUser = true;
+              if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 defaultRestrictedPharmacy = 'villiers';
+              } else {
+                 console.warn(`Mauritz/Elani allowed list != ['villiers']:`, allowed);
+                 defaultRestrictedPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value; // Fallback
+              }
+            } else {
+              // Lize, Charl, Anmarie, etc. are not strictly restricted (dropdown enabled)
+              console.log(`User ${loggedInUsername} identified as not strictly restricted (dropdown enabled).`);
+              restrictUser = false;
+            }
+            // --- End ADJUSTMENT ---
+
+            // Set restriction state (only true for Mauritz/Elani now)
+            setIsRestrictedUser(restrictUser);
+
+            // Set selected pharmacy based on restriction
+            if (restrictUser) {
+                console.log(`Setting pharmacy to ${defaultRestrictedPharmacy} for restricted user ${loggedInUsername}.`);
+                setSelectedPharmacy(defaultRestrictedPharmacy);
+            } else {
+                 // Ensure selected pharmacy is valid for unrestricted user
+                 const currentSelection = selectedPharmacy; // Capture current selection
+                 const defaultUnrestricted = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                 if (!allowed.includes(currentSelection) && allowed.length > 0) { // Check allowed length > 0
+                    console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultUnrestricted}`);
+                    setSelectedPharmacy(defaultUnrestricted);
+                 } else {
+                     console.log(`Keeping pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+                 }
+            }
+
+            // Finally, set loggedIn and clear form
+            setIsLoggedIn(true); 
+            setLoginUsername('');
+            setLoginPassword('');
+
+          } else {
+             // This case should ideally not happen if login succeeded, but handle it defensively
+             console.error("Login succeeded but check_auth failed or reported not logged in.");
+             setLoginError('Login verification failed. Please try again.');
+             setIsLoggedIn(false);
+             setCurrentUser(null);
+             setAllowedPharmacies([]);
+             setIsRestrictedUser(false);
+          }
+        } catch (authError) {
+           console.error("Failed to fetch auth details after login:", authError);
+           setLoginError('Login verification failed. Please try again.');
+           setIsLoggedIn(false);
+           setCurrentUser(null);
+           setAllowedPharmacies([]);
+           setIsRestrictedUser(false);
+        }
+      } 
+      // No explicit else needed for loginResponse.status != 200, as axios throws for non-2xx
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setAllowedPharmacies([]); // Clear restrictions on login fail
+      setIsRestrictedUser(false);
+      if (error.response && error.response.data && error.response.data.error) {
+        setLoginError(error.response.data.error);
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    } finally {
+        setIsLoadingAuth(false); // Hide loading indicator
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      // Reset view or other state if needed
+      setView('dashboard'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Handle logout error if needed (e.g., show message)
+    }
+  };
+
+  // --- Existing Helper Functions & Data Preparation ---
+  // ... (formatCurrency, donut data, rolling window helpers, etc.)
+
+  // --- Conditional Rendering --- 
+
+  // Show loading indicator while checking auth status
+  if (isLoadingAuth) {
+    return <div className="loading-container">Checking authentication...</div>; 
+  }
+
+  if (!isLoggedIn) {
+    // --- Render TLC Brand Login Card with image background ---
+    return (
+      <div className="session">
+        <div className="login-center-wrapper">
+          <form className="log-in" autoComplete="off" onSubmit={e => { e.preventDefault(); handleLoginSubmit(e); }}>
+            <div className="login-welcome">
+              <div className="login-title-main">Welcome back</div>
+              <div className="login-title-sub">Login to view the dashboard</div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input 
+                placeholder="Username" 
+                type="text" 
+                name="username" 
+                id="username" 
+                autoComplete="off"
+                value={loginUsername}
+                onChange={e => setLoginUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input 
+                placeholder="Password" 
+                type="password" 
+                name="password" 
+                id="password" 
+                autoComplete="off"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="button login-button">Log in</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Render Main Dashboard (Only if logged in) --- 
+  return (
+    <div className="dashboard-container">
+      <div className="rotate-overlay">Please rotate your device to landscape to use the dashboard.</div>
+      {/* --- Custom Alert Box --- */}
+      {alertInfo.isVisible && (
+        <div className={`custom-alert alert-${alertInfo.type}`}> 
+          {alertInfo.message}
+          <button 
+            className="alert-close-button" 
+            onClick={() => setAlertInfo({ ...alertInfo, isVisible: false })}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+      {/* --- End Custom Alert Box --- */}
+
+      <header className="dashboard-header">
+         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* ... logo and title ... */}
+           <img 
+            src="/the-local-choice-logo.png" 
+            alt="TLC Logo" 
+            style={{ height: '60px' }}
+          />
+          {/* Find the label for the selected pharmacy */}
+          <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
+         </div>
+         {/* Hamburger icon for mobile */}
+         <button
+           className="hamburger-menu-btn"
+           aria-label="Open navigation menu"
+           onClick={() => setMobileNavOpen(v => !v)}
+         >
+           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="14" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="21" width="32" height="3.5" rx="1.75" fill="#fff"/>
+           </svg>
+         </button>
+         {/* Navigation: normal on desktop, overlay on mobile if open */}
+         <nav className={`dashboard-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
+           {/* ... existing nav content ... */}
            <select
-                id="yearly-year-select"
+              value={selectedPharmacy}
+              onChange={e => setSelectedPharmacy(e.target.value)}
+              disabled={isRestrictedUser}
+              style={{
+                marginRight: '0.75rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                background: '#232b3b',
+                color: '#fff',
+                border: '1px solid #374151',
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer',
+                opacity: isRestrictedUser ? 0.6 : 1
+              }}
+            >
+              {(allowedPharmacies.length > 0
+                ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
+                : PHARMACY_OPTIONS
+              ).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+                onClick={() => { setView('dashboard'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
+                Dashboard 
+            </button>
+            <button
+                onClick={() => { setView('monthly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
+                Monthly
+            </button>
+            <button
+                onClick={() => { setView('yearly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
+                Yearly
+            </button>
+            <button
+                onClick={() => { setView('stock'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
+                Stock
+            </button>
+            <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleUpdateClick}
+                className="button button-update" 
+              >
+                Update
+              </button>
+              <button
+                onClick={handleLogout}
+                className="button button-primary button-logout" 
+              >
+                Logout ({currentUser})
+              </button>
+            </div>
+         </nav>
+         {/* Mobile nav overlay background */}
+         {mobileNavOpen && <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}></div>}
+      </header>
+
+      {/* NEW: Status Text Positioned Below Header */}
+      <div style={{ width: '100%', textAlign: 'right', marginTop: '-8px' }}> {/* Increased negative marginTop */}
+        <span className="update-status-text">
+          Updated to: {latestDataDate}
+        </span>
+      </div>
+
+      {/* --- NEW: Dashboard View Section --- */}
+      {view === 'dashboard' && (
+        <section className="dashboard-view-section" style={{ padding: 'var(--padding-section-md) 0' }}>
+          {/* Updated Selectors: Year and Month Only */}
+          <div className="month-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
+             <div className="year-selector">
+                <label htmlFor="dash-year-select">Year:</label>
+                <select 
+                  id="dash-year-select"
                   className="input" 
                   value={selectedYear}
                   onChange={e => setSelectedYear(parseInt(e.target.value, 10))}
@@ -2169,108 +2918,1498 @@ function App() {
                     return <option key={yearOption} value={yearOption}>{yearOption}</option>;
                   }).reverse()}
                 </select>
+             </div>
+             <div className="month-buttons">
+               {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => {
+                 const monthNumber = index + 1;
+                 const isSelectedMonth = month === monthNumber;
+                 return (
+                   <button 
+                     key={monthName}
+                     onClick={() => setMonth(monthNumber)}
+                     className={`button button-month ${isSelectedMonth ? 'active' : ''}`}
+                   >
+                     {monthName}
+                   </button>
+                 );
+               })}
+             </div>
            </div>
 
-           <div className="yearly-top-row-container">
-             <div className="kpi-grid-container">
-                 <div className="kpis-grid kpis-grid--yearly">
+          {/* Updated KPI Row (using dashboardMonthlyAgg) */}
+          <div className="kpis-grid kpis-grid--dashboard">
+            {/* Removed Transactions KPI card */}
             <div className="kpi-card">
-                       <div className="kpi-label">Total Turnover ({selectedYear})</div>
-                       <div className="kpi-value kpi-value--accent">{formatCurrency(yearlyAggregates.current_turnover)}</div>
+              <div className="kpi-label">Turnover</div>
+              <div className="kpi-value kpi-value--accent">{formatCurrency(dashboardMonthlyAgg.turnover) || '-'}</div>
             </div>
             <div className="kpi-card">
-                       <div className="kpi-label">Gross Profit % ({selectedYear})</div>
-                       <div className="kpi-value">
-                         {yearlyAggregates.current_turnover > 0 ? 
-                           (((yearlyAggregates.current_turnover - yearlyAggregates.current_cost_of_sales) / yearlyAggregates.current_turnover) * 100).toFixed(1)
-                           : 0}%
-                       </div>
+              <div className="kpi-label">Gross Profit %</div>
+              <div className="kpi-value">{dashboardMonthlyAgg.turnover ? ((dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) / dashboardMonthlyAgg.turnover * 100).toFixed(1) : '0.0'}%</div>
             </div>
             <div className="kpi-card">
-                       <div className="kpi-label">YoY Turnover Growth</div>
-                       <div className="kpi-value" style={{
-                         color: adjustedYearlyYoY === Infinity ? 'var(--status-success)'
-                           : adjustedYearlyYoY > 0 ? 'var(--status-success)'
-                           : adjustedYearlyYoY < 0 ? 'var(--status-error)'
-                           : 'inherit'
-                       }}>
-                         {adjustedYearlyYoY === Infinity ? '∞%'
-                           : adjustedYearlyYoY !== null ? `${adjustedYearlyYoY.toFixed(1)}%`
-                           : 'N/A'}
-                       </div>
+              <div className="kpi-label">Gross Profit Value</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) || '-'}</div>
             </div>
             <div className="kpi-card">
-                       <div className="kpi-label">Cost of Sales ({selectedYear})</div>
-                       <div className="kpi-value">{formatCurrency(yearlyAggregates.current_cost_of_sales)}</div>
+              <div className="kpi-label">Cost of Sales</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.costOfSales) || '-'}</div>
             </div>
             <div className="kpi-card">
-                       <div className="kpi-label">Purchases ({selectedYear})</div>
-                       <div className="kpi-value">{formatCurrency(yearlyAggregates.current_purchases)}</div>
+              <div className="kpi-label">Purchases </div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.purchases) || '-'}</div>
             </div>
+          </div>
+
+          {/* --- Secondary KPI Row (3 cards) --- */}
+          <div className="kpis-grid kpis-grid--dashboard-secondary" style={{ marginBottom: '0.5rem' }}>
             <div className="kpi-card">
-                       <div className="kpi-label">Transactions ({selectedYear})</div>
-                       <div className="kpi-value">{yearlyAggregates.current_transactions?.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
+            <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Transactions Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.transactions != null ? dashboardMonthlyAgg.transactions.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Scripts Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.totalScripts != null ? dashboardMonthlyAgg.totalScripts.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
               </div>
             </div>
-             </div> 
-             
-             <div className="donut-chart-container">
-                 <div className="chart-container chart-container--donut">
-                     <ResponsiveContainer width="100%" height={250}>
-                          <PieChart> 
-                             <Pie
-                                 data={yearlyDonutData} 
-                                 cx="50%"
-                                 cy="50%"
-                                 innerRadius={50} 
-                                 outerRadius={90} 
-                                 fill="#8884d8" 
-                                 paddingAngle={5}
-                                 dataKey="value"
-                                 labelLine={false}
-                                 label={null}
-                                 cornerRadius={3} 
-                             >
-                             {yearlyDonutData.map((entry, index) => (
-                                 <Cell 
-                                     key={`yearly-donut-cell-${index}`} 
-                                     fill={DONUT_COLORS[index % DONUT_COLORS.length]} 
-                                     stroke="none" 
-                                 />
-                             ))}
-                             </Pie>
-                             <Tooltip formatter={(value, name) => [formatCurrency(value), name]} />
-                             <Legend 
-                                layout="vertical" 
-                                verticalAlign="middle" 
-                                align="right"
-                                wrapperStyle={{ fontSize: 'var(--text-sm)', paddingLeft: '10px'}} 
-                                formatter={(value, entry) => { 
-                                     const itemValue = entry.payload?.value; 
-                                     if (itemValue == null) return value; 
-                                     const percent = yearlyTotalTurnover > 0 ? ((itemValue / yearlyTotalTurnover) * 100).toFixed(0) : 0; 
-                                     return `${value} (${percent}%)`; 
-                                }}
-                             />
-                         </PieChart>
-                     </ResponsiveContainer>
+            <div className="kpi-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <GaugeChart
+                value={
+                  (typeof dashboardMonthlyAgg.dispensaryTurnover === 'number' && typeof dashboardMonthlyAgg.turnover === 'number' && dashboardMonthlyAgg.turnover > 0)
+                    ? (dashboardMonthlyAgg.dispensaryTurnover / dashboardMonthlyAgg.turnover) * 100
+                    : 0
+                }
+                max={100}
+                color={COLOR_CHARTREUSE}
+                label={"Dispensary %"}
+              />
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Avg Basket Size</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketSizeReported != null ? dashboardMonthlyAgg.avgBasketSizeReported.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd', marginTop: 6 }}>Avg Basket Value</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketValueReported != null ? formatCurrency(dashboardMonthlyAgg.avgBasketValueReported) : '-'}</span>
               </div>
             </div>
           </div>
 
-{/* NEW: Monthly Totals Bar Chart (Moved Below KPIs) */} 
-<div className="chart-container" style={{ marginTop: 'var(--gap-cards)', marginBottom: 'var(--gap-cards)' }}> 
-             <h3 style={{marginBottom: '0.5rem', color: 'var(--text-secondary)'}}>Monthly Turnover ({selectedYear})</h3>
-             <ResponsiveContainer width="100%" height={200}> 
-                 {Array.isArray(calculatedMonthlyTotals) && calculatedMonthlyTotals.length > 0 && (
-                   <BarChart data={calculatedMonthlyTotals} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          {/* --- 12-Month Rolling Window Bar Charts Row --- */}
+          <div className="charts-row" style={{ marginTop: 'var(--gap-cards)' }}>
+            {/* Turnover Chart */}
+            <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+              <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+                {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+                  <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
                     <XAxis 
-                       dataKey="month" 
-                       tickFormatter={(monthNum) => new Date(0, monthNum - 1).toLocaleString('default', { month: 'short' })} 
+                      dataKey="label" 
                       interval={0} 
                       tickLine={false} 
                       axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                      width={50} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 'dataMax']}
+                      tickFormatter={value => value ? `R${Math.round(value)}` : ''}
+                      width={60}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '10px'}}
+                      // label removed
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{ 
+                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                          borderColor: getCssVar('--border-color'),
+                          borderRadius: '0.375rem'
+                      }}
+                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+                      labelStyle={{ color: CHART_AXIS_COLOR }}
+                      formatter={(value, name) => {
+                        if (name === 'Avg Basket Value') return [formatCurrency(value), 'Avg Basket Value'];
+                        if (name === 'Total Turnover') return [formatCurrency(value), 'Total Turnover'];
+                        return [formatCurrency(value), name];
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="total" name="Total Turnover">
+                      {/* UPDATE: Map over dashboardRolling12MonthsData */}
+                      {dashboardRolling12MonthsData.map((entry, idx) => (
+                          <Cell
+                              key={`cell-dash-rolling12-${entry.label}`}
+                              fill={COLOR_COQUELICOT} 
+                              radius={[4, 4, 0, 0]} 
+                  />
+              ))}
+            </Bar>
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="avgBasketValueReported" 
+              name="Avg Basket Value" 
+              stroke={COLOR_WHITE} 
+              strokeWidth={4}
+              dot={false}
+              activeDot={false}
+            />
+            <Legend />
+          </ComposedChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+    {/* Cost of Sales Chart (now LineChart) */}
+    <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+      <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
+      <ResponsiveContainer width="100%" height={220}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+            <XAxis 
+              dataKey="label" 
+              interval={0} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+            />
+            <YAxis 
+              tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+              width={50} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+            />
+            <Tooltip
+              cursor={{ fill: 'transparent' }}
+              contentStyle={{ 
+                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                  borderColor: getCssVar('--border-color'),
+                  borderRadius: '0.375rem'
+              }}
+              itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+              labelStyle={{ color: CHART_AXIS_COLOR }}
+              formatter={(value, name) => [formatCurrency(value), name === 'costOfSales' ? 'Cost of Sales' : 'Purchases']} 
+            />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="costOfSales" 
+              name="Cost of Sales" 
+              stroke={COLOR_GOLD} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="purchases" 
+              name="Purchases" 
+              stroke={COLOR_ELECTRIC_PURPLE} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+          </LineChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+  </div>
+  {/* End 12-Month Rolling Window Bar Charts Row */}
+
+  {/* --- Avg Basket Value 12-Month Rolling Line Chart --- */}
+  <div className="chart-container" style={{ marginTop: 'var(--gap-cards)' }}>
+    <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Avg Basket Value (Last 12 Months)</h3>
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+        <XAxis 
+          dataKey="label" 
+          interval={0} 
+          tickLine={false} 
+          axisLine={false} 
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px', angle: -30, textAnchor: 'end'}} 
+        />
+        <YAxis 
+          domain={[0, 'dataMax']}
+          tickFormatter={value => `R${(value/1000000).toFixed(1)}M`}
+          width={65}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px'}}
+        />
+        <Tooltip
+          cursor={{ fill: 'transparent' }}
+          contentStyle={{ 
+              backgroundColor: getCssVar('--chart-tooltip-bg'), 
+              borderColor: getCssVar('--border-color'),
+              borderRadius: '0.375rem'
+          }}
+          itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+          labelStyle={{ color: COLOR_ELECTRIC_PURPLE }}
+          formatter={(value) => [formatCurrency(value), 'Avg Basket Value']} 
+        />
+        <Line 
+          type="monotone" 
+          dataKey="avgBasketValueReported" 
+          name="Avg Basket Value" 
+          stroke={COLOR_ELECTRIC_PURPLE} 
+          strokeWidth={4}
+          dot={false}
+          activeDot={false}
+        />
+        <Legend 
+          verticalAlign="bottom" 
+          iconType="circle" 
+          wrapperStyle={{ fontSize: '1.1rem', color: COLOR_ELECTRIC_PURPLE, paddingTop: 10 }} 
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+
+  // --- Fetch monthly turnover data for DASHBOARD view (for daily turnover bar chart) ---
+  // REMOVE: This useEffect is no longer needed for the rolling window
+  /*
+  useEffect(() => {
+    if (view !== 'dashboard') return;
+    const year = selectedYear;
+    const monthStrPadded = String(month).padStart(2, '0');
+    const monthYearStr = `${year}-${monthStrPadded}`;
+    axios.get(`/api/month/${monthYearStr}/turnover`)
+      .then(res => setMonthlyData(res.data || []))
+      .catch(error => {
+        console.error("Error fetching monthly turnover data for dashboard view:", error);
+        setMonthlyData([]);
+      });
+  }, [view, selectedYear, month, selectedPharmacy]);
+  */
+
+  // --- Check Authentication Status on Load ---
+    // --- Check Authentication Status on Load ---
+  useEffect(() => {
+    setIsLoadingAuth(true);
+    axios.get('/api/check_auth') // Use relative path if proxy is set
+      .then(res => {
+        if (res.data.isLoggedIn) {
+          const loggedInUsername = res.data.username;
+          const allowed = res.data.allowed_pharmacies || [];
+          console.log("Auth Check Response:", res.data); // Log response
+
+          setIsLoggedIn(true);
+          setCurrentUser(loggedInUsername);
+          setAllowedPharmacies(allowed);
+
+          // --- UPDATED: Explicitly check username for restriction ---
+          if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+            console.log(`User ${loggedInUsername} identified as restricted.`);
+            // Set restriction *first*
+            setIsRestrictedUser(true);
+            // Then force the pharmacy selection if appropriate
+            if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 console.log(`Forcing pharmacy to 'villiers' for restricted user ${loggedInUsername}.`);
+                 setSelectedPharmacy('villiers');
+            } else {
+                // Handle edge case: restricted user has unexpected allowed list
+                console.warn(`User ${loggedInUsername} is restricted but allowed list is not just ['villiers']:`, allowed);
+                const currentSelection = selectedPharmacy; // Capture current selection before potential change
+                const fallback = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                if (!allowed.includes(currentSelection)) {
+                    console.log(`Current selection ${currentSelection} invalid for restricted user ${loggedInUsername}. Resetting to ${fallback}`);
+                    setSelectedPharmacy(fallback);
+                } else {
+                     console.log(`Keeping valid pharmacy ${currentSelection} for restricted user ${loggedInUsername}`);
+                }
+            }
+          } else {
+            // User is Charl, Anmarie, or potentially others - NOT restricted
+            console.log(`User ${loggedInUsername} identified as unrestricted.`);
+             // Set restriction *first*
+            setIsRestrictedUser(false);
+            const currentSelection = selectedPharmacy; // Capture current selection
+            const defaultPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+            // Check if current selection is valid for unrestricted user after setting state
+            if ((allowed.length > 0 && !allowed.includes(currentSelection)) || (allowed.length === 0 && loggedInUsername)) {
+                 console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultPharmacy}`);
+                 setSelectedPharmacy(defaultPharmacy);
+            } else {
+                 console.log(`Keeping valid pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+            }
+          }
+          // --- End UPDATED ---
+
+        } else {
+          // User is not logged in
+          console.log("Auth Check Response: Not Logged In");
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setAllowedPharmacies([]); // Clear restrictions on logout
+          setIsRestrictedUser(false);
+          // Optionally reset pharmacy selection on logout?
+          // setSelectedPharmacy(PHARMACY_OPTIONS[0].value);
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+        setIsLoggedIn(false); // Assume not logged in on error
+        setCurrentUser(null);
+        setAllowedPharmacies([]); // Clear restrictions on error
+        setIsRestrictedUser(false);
+      })
+      .finally(() => {
+        setIsLoadingAuth(false); // Finished loading auth status
+      });
+  // Dependency array is empty: run only once on mount
+  }, []);
+
+  // --- Login/Logout Handlers ---
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError(''); // Clear previous errors
+    setIsLoadingAuth(true); // Show loading indicator during login process
+    try {
+      const loginResponse = await axios.post('/api/login', { 
+          username: loginUsername, 
+          password: loginPassword 
+      });
+
+      if (loginResponse.status === 200) {
+        // Login successful, now immediately fetch auth details
+        console.log("Login POST successful. Fetching auth details...");
+        try {
+          const authResponse = await axios.get('/api/check_auth');
+          console.log("Auth Check Response (after login):", authResponse.data);
+
+          if (authResponse.data && authResponse.data.isLoggedIn) {
+            const loggedInUsername = authResponse.data.username;
+            const allowed = authResponse.data.allowed_pharmacies || [];
+            
+            // Set all states together AFTER getting auth info
+            setAllowedPharmacies(allowed);
+            setCurrentUser(loggedInUsername);
+            
+            // Determine restriction and set related state
+            let restrictUser = false;
+            let defaultRestrictedPharmacy = null;
+
+            // --- ADJUSTMENT: Only Mauritz/Elani are strictly 'restricted' (dropdown disabled) ---
+            if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+              console.log(`User ${loggedInUsername} identified as strictly restricted (dropdown disabled).`);
+              restrictUser = true;
+              if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 defaultRestrictedPharmacy = 'villiers';
+              } else {
+                 console.warn(`Mauritz/Elani allowed list != ['villiers']:`, allowed);
+                 defaultRestrictedPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value; // Fallback
+              }
+            } else {
+              // Lize, Charl, Anmarie, etc. are not strictly restricted (dropdown enabled)
+              console.log(`User ${loggedInUsername} identified as not strictly restricted (dropdown enabled).`);
+              restrictUser = false;
+            }
+            // --- End ADJUSTMENT ---
+
+            // Set restriction state (only true for Mauritz/Elani now)
+            setIsRestrictedUser(restrictUser);
+
+            // Set selected pharmacy based on restriction
+            if (restrictUser) {
+                console.log(`Setting pharmacy to ${defaultRestrictedPharmacy} for restricted user ${loggedInUsername}.`);
+                setSelectedPharmacy(defaultRestrictedPharmacy);
+            } else {
+                 // Ensure selected pharmacy is valid for unrestricted user
+                 const currentSelection = selectedPharmacy; // Capture current selection
+                 const defaultUnrestricted = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                 if (!allowed.includes(currentSelection) && allowed.length > 0) { // Check allowed length > 0
+                    console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultUnrestricted}`);
+                    setSelectedPharmacy(defaultUnrestricted);
+                 } else {
+                     console.log(`Keeping pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+                 }
+            }
+
+            // Finally, set loggedIn and clear form
+            setIsLoggedIn(true); 
+            setLoginUsername('');
+            setLoginPassword('');
+
+          } else {
+             // This case should ideally not happen if login succeeded, but handle it defensively
+             console.error("Login succeeded but check_auth failed or reported not logged in.");
+             setLoginError('Login verification failed. Please try again.');
+             setIsLoggedIn(false);
+             setCurrentUser(null);
+             setAllowedPharmacies([]);
+             setIsRestrictedUser(false);
+          }
+        } catch (authError) {
+           console.error("Failed to fetch auth details after login:", authError);
+           setLoginError('Login verification failed. Please try again.');
+           setIsLoggedIn(false);
+           setCurrentUser(null);
+           setAllowedPharmacies([]);
+           setIsRestrictedUser(false);
+        }
+      } 
+      // No explicit else needed for loginResponse.status != 200, as axios throws for non-2xx
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setAllowedPharmacies([]); // Clear restrictions on login fail
+      setIsRestrictedUser(false);
+      if (error.response && error.response.data && error.response.data.error) {
+        setLoginError(error.response.data.error);
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    } finally {
+        setIsLoadingAuth(false); // Hide loading indicator
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      // Reset view or other state if needed
+      setView('dashboard'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Handle logout error if needed (e.g., show message)
+    }
+  };
+
+  // --- Existing Helper Functions & Data Preparation ---
+  // ... (formatCurrency, donut data, rolling window helpers, etc.)
+
+  // --- Conditional Rendering --- 
+
+  // Show loading indicator while checking auth status
+  if (isLoadingAuth) {
+    return <div className="loading-container">Checking authentication...</div>; 
+  }
+
+  if (!isLoggedIn) {
+    // --- Render TLC Brand Login Card with image background ---
+    return (
+      <div className="session">
+        <div className="login-center-wrapper">
+          <form className="log-in" autoComplete="off" onSubmit={e => { e.preventDefault(); handleLoginSubmit(e); }}>
+            <div className="login-welcome">
+              <div className="login-title-main">Welcome back</div>
+              <div className="login-title-sub">Login to view the dashboard</div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input 
+                placeholder="Username" 
+                type="text" 
+                name="username" 
+                id="username" 
+                autoComplete="off"
+                value={loginUsername}
+                onChange={e => setLoginUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input 
+                placeholder="Password" 
+                type="password" 
+                name="password" 
+                id="password" 
+                autoComplete="off"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="button login-button">Log in</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Render Main Dashboard (Only if logged in) --- 
+  return (
+    <div className="dashboard-container">
+      <div className="rotate-overlay">Please rotate your device to landscape to use the dashboard.</div>
+      {/* --- Custom Alert Box --- */}
+      {alertInfo.isVisible && (
+        <div className={`custom-alert alert-${alertInfo.type}`}> 
+          {alertInfo.message}
+          <button 
+            className="alert-close-button" 
+            onClick={() => setAlertInfo({ ...alertInfo, isVisible: false })}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+      {/* --- End Custom Alert Box --- */}
+
+      <header className="dashboard-header">
+         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* ... logo and title ... */}
+           <img 
+            src="/the-local-choice-logo.png" 
+            alt="TLC Logo" 
+            style={{ height: '60px' }}
+          />
+          {/* Find the label for the selected pharmacy */}
+          <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
+         </div>
+         {/* Hamburger icon for mobile */}
+         <button
+           className="hamburger-menu-btn"
+           aria-label="Open navigation menu"
+           onClick={() => setMobileNavOpen(v => !v)}
+         >
+           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="14" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="21" width="32" height="3.5" rx="1.75" fill="#fff"/>
+           </svg>
+         </button>
+         {/* Navigation: normal on desktop, overlay on mobile if open */}
+         <nav className={`dashboard-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
+           {/* ... existing nav content ... */}
+           <select
+              value={selectedPharmacy}
+              onChange={e => setSelectedPharmacy(e.target.value)}
+              disabled={isRestrictedUser}
+              style={{
+                marginRight: '0.75rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                background: '#232b3b',
+                color: '#fff',
+                border: '1px solid #374151',
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer',
+                opacity: isRestrictedUser ? 0.6 : 1
+              }}
+            >
+              {(allowedPharmacies.length > 0
+                ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
+                : PHARMACY_OPTIONS
+              ).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+                onClick={() => { setView('dashboard'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
+                Dashboard 
+            </button>
+            <button
+                onClick={() => { setView('monthly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
+                Monthly
+            </button>
+            <button
+                onClick={() => { setView('yearly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
+                Yearly
+            </button>
+            <button
+                onClick={() => { setView('stock'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
+                Stock
+            </button>
+            <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleUpdateClick}
+                className="button button-update" 
+              >
+                Update
+              </button>
+              <button
+                onClick={handleLogout}
+                className="button button-primary button-logout" 
+              >
+                Logout ({currentUser})
+              </button>
+            </div>
+         </nav>
+         {/* Mobile nav overlay background */}
+         {mobileNavOpen && <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}></div>}
+      </header>
+
+      {/* NEW: Status Text Positioned Below Header */}
+      <div style={{ width: '100%', textAlign: 'right', marginTop: '-8px' }}> {/* Increased negative marginTop */}
+        <span className="update-status-text">
+          Updated to: {latestDataDate}
+        </span>
+      </div>
+
+      {/* --- NEW: Dashboard View Section --- */}
+      {view === 'dashboard' && (
+        <section className="dashboard-view-section" style={{ padding: 'var(--padding-section-md) 0' }}>
+          {/* Updated Selectors: Year and Month Only */}
+          <div className="month-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
+             <div className="year-selector">
+                <label htmlFor="dash-year-select">Year:</label>
+                <select 
+                  id="dash-year-select"
+                  className="input" 
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(parseInt(e.target.value, 10))}
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const yearOption = currentYear - i;
+                    return <option key={yearOption} value={yearOption}>{yearOption}</option>;
+                  }).reverse()}
+                </select>
+             </div>
+             <div className="month-buttons">
+               {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => {
+                 const monthNumber = index + 1;
+                 const isSelectedMonth = month === monthNumber;
+                 return (
+                   <button 
+                     key={monthName}
+                     onClick={() => setMonth(monthNumber)}
+                     className={`button button-month ${isSelectedMonth ? 'active' : ''}`}
+                   >
+                     {monthName}
+                   </button>
+                 );
+               })}
+             </div>
+           </div>
+
+          {/* Updated KPI Row (using dashboardMonthlyAgg) */}
+          <div className="kpis-grid kpis-grid--dashboard">
+            {/* Removed Transactions KPI card */}
+            <div className="kpi-card">
+              <div className="kpi-label">Turnover</div>
+              <div className="kpi-value kpi-value--accent">{formatCurrency(dashboardMonthlyAgg.turnover) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit %</div>
+              <div className="kpi-value">{dashboardMonthlyAgg.turnover ? ((dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) / dashboardMonthlyAgg.turnover * 100).toFixed(1) : '0.0'}%</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit Value</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Cost of Sales</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Purchases </div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.purchases) || '-'}</div>
+            </div>
+          </div>
+
+          {/* --- Secondary KPI Row (3 cards) --- */}
+          <div className="kpis-grid kpis-grid--dashboard-secondary" style={{ marginBottom: '0.5rem' }}>
+            <div className="kpi-card">
+            <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Transactions Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.transactions != null ? dashboardMonthlyAgg.transactions.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Scripts Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.totalScripts != null ? dashboardMonthlyAgg.totalScripts.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+              </div>
+            </div>
+            <div className="kpi-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <GaugeChart
+                value={
+                  (typeof dashboardMonthlyAgg.dispensaryTurnover === 'number' && typeof dashboardMonthlyAgg.turnover === 'number' && dashboardMonthlyAgg.turnover > 0)
+                    ? (dashboardMonthlyAgg.dispensaryTurnover / dashboardMonthlyAgg.turnover) * 100
+                    : 0
+                }
+                max={100}
+                color={COLOR_CHARTREUSE}
+                label={"Dispensary %"}
+              />
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Avg Basket Size</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketSizeReported != null ? dashboardMonthlyAgg.avgBasketSizeReported.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd', marginTop: 6 }}>Avg Basket Value</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketValueReported != null ? formatCurrency(dashboardMonthlyAgg.avgBasketValueReported) : '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* --- 12-Month Rolling Window Bar Charts Row --- */}
+          <div className="charts-row" style={{ marginTop: 'var(--gap-cards)' }}>
+            {/* Turnover Chart */}
+            <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+              <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+                {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+                  <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+                    <XAxis 
+                      dataKey="label" 
+                      interval={0} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                      width={50} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 'dataMax']}
+                      tickFormatter={value => value ? `R${Math.round(value)}` : ''}
+                      width={60}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '10px'}}
+                      // label removed
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{ 
+                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                          borderColor: getCssVar('--border-color'),
+                          borderRadius: '0.375rem'
+                      }}
+                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+                      labelStyle={{ color: CHART_AXIS_COLOR }}
+                      formatter={(value, name) => {
+                        if (name === 'Avg Basket Value') return [formatCurrency(value), 'Avg Basket Value'];
+                        if (name === 'Total Turnover') return [formatCurrency(value), 'Total Turnover'];
+                        return [formatCurrency(value), name];
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="total" name="Total Turnover">
+                      {/* UPDATE: Map over dashboardRolling12MonthsData */}
+                      {dashboardRolling12MonthsData.map((entry, idx) => (
+                          <Cell
+                              key={`cell-dash-rolling12-${entry.label}`}
+                              fill={COLOR_COQUELICOT} 
+                              radius={[4, 4, 0, 0]} 
+                  />
+              ))}
+            </Bar>
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="avgBasketValueReported" 
+              name="Avg Basket Value" 
+              stroke={COLOR_WHITE} 
+              strokeWidth={4}
+              dot={false}
+              activeDot={false}
+            />
+            <Legend />
+          </ComposedChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+    {/* Cost of Sales Chart (now LineChart) */}
+    <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+      <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
+      <ResponsiveContainer width="100%" height={220}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+            <XAxis 
+              dataKey="label" 
+              interval={0} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+            />
+            <YAxis 
+              tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+              width={50} 
+              tickLine={false} 
+              axisLine={false} 
+              tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+            />
+            <Tooltip
+              cursor={{ fill: 'transparent' }}
+              contentStyle={{ 
+                  backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                  borderColor: getCssVar('--border-color'),
+                  borderRadius: '0.375rem'
+              }}
+              itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+              labelStyle={{ color: CHART_AXIS_COLOR }}
+              formatter={(value, name) => [formatCurrency(value), name === 'costOfSales' ? 'Cost of Sales' : 'Purchases']} 
+            />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="costOfSales" 
+              name="Cost of Sales" 
+              stroke={COLOR_GOLD} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="purchases" 
+              name="Purchases" 
+              stroke={COLOR_ELECTRIC_PURPLE} 
+              strokeWidth={3}
+              dot={false}
+              activeDot={false}
+            />
+          </LineChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+  </div>
+  {/* End 12-Month Rolling Window Bar Charts Row */}
+
+  {/* --- Avg Basket Value 12-Month Rolling Line Chart --- */}
+  <div className="chart-container" style={{ marginTop: 'var(--gap-cards)' }}>
+    <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Avg Basket Value (Last 12 Months)</h3>
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+        <XAxis 
+          dataKey="label" 
+          interval={0} 
+          tickLine={false} 
+          axisLine={false} 
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px', angle: -30, textAnchor: 'end'}} 
+        />
+        <YAxis 
+          domain={[0, 'dataMax']}
+          tickFormatter={value => `R${(value/1000000).toFixed(1)}M`}
+          width={65}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '12px'}}
+        />
+        <Tooltip
+          cursor={{ fill: 'transparent' }}
+          contentStyle={{ 
+              backgroundColor: getCssVar('--chart-tooltip-bg'), 
+              borderColor: getCssVar('--border-color'),
+              borderRadius: '0.375rem'
+          }}
+          itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+          labelStyle={{ color: COLOR_ELECTRIC_PURPLE }}
+          formatter={(value) => [formatCurrency(value), 'Avg Basket Value']} 
+        />
+        <Line 
+          type="monotone" 
+          dataKey="avgBasketValueReported" 
+          name="Avg Basket Value" 
+          stroke={COLOR_ELECTRIC_PURPLE} 
+          strokeWidth={4}
+          dot={false}
+          activeDot={false}
+        />
+        <Legend 
+          verticalAlign="bottom" 
+          iconType="circle" 
+          wrapperStyle={{ fontSize: '1.1rem', color: COLOR_ELECTRIC_PURPLE, paddingTop: 10 }} 
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+
+  // --- Fetch monthly turnover data for DASHBOARD view (for daily turnover bar chart) ---
+  // REMOVE: This useEffect is no longer needed for the rolling window
+  /*
+  useEffect(() => {
+    if (view !== 'dashboard') return;
+    const year = selectedYear;
+    const monthStrPadded = String(month).padStart(2, '0');
+    const monthYearStr = `${year}-${monthStrPadded}`;
+    axios.get(`/api/month/${monthYearStr}/turnover`)
+      .then(res => setMonthlyData(res.data || []))
+      .catch(error => {
+        console.error("Error fetching monthly turnover data for dashboard view:", error);
+        setMonthlyData([]);
+      });
+  }, [view, selectedYear, month, selectedPharmacy]);
+  */
+
+  // --- Check Authentication Status on Load ---
+    // --- Check Authentication Status on Load ---
+  useEffect(() => {
+    setIsLoadingAuth(true);
+    axios.get('/api/check_auth') // Use relative path if proxy is set
+      .then(res => {
+        if (res.data.isLoggedIn) {
+          const loggedInUsername = res.data.username;
+          const allowed = res.data.allowed_pharmacies || [];
+          console.log("Auth Check Response:", res.data); // Log response
+
+          setIsLoggedIn(true);
+          setCurrentUser(loggedInUsername);
+          setAllowedPharmacies(allowed);
+
+          // --- UPDATED: Explicitly check username for restriction ---
+          if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+            console.log(`User ${loggedInUsername} identified as restricted.`);
+            // Set restriction *first*
+            setIsRestrictedUser(true);
+            // Then force the pharmacy selection if appropriate
+            if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 console.log(`Forcing pharmacy to 'villiers' for restricted user ${loggedInUsername}.`);
+                 setSelectedPharmacy('villiers');
+            } else {
+                // Handle edge case: restricted user has unexpected allowed list
+                console.warn(`User ${loggedInUsername} is restricted but allowed list is not just ['villiers']:`, allowed);
+                const currentSelection = selectedPharmacy; // Capture current selection before potential change
+                const fallback = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                if (!allowed.includes(currentSelection)) {
+                    console.log(`Current selection ${currentSelection} invalid for restricted user ${loggedInUsername}. Resetting to ${fallback}`);
+                    setSelectedPharmacy(fallback);
+                } else {
+                     console.log(`Keeping valid pharmacy ${currentSelection} for restricted user ${loggedInUsername}`);
+                }
+            }
+          } else {
+            // User is Charl, Anmarie, or potentially others - NOT restricted
+            console.log(`User ${loggedInUsername} identified as unrestricted.`);
+             // Set restriction *first*
+            setIsRestrictedUser(false);
+            const currentSelection = selectedPharmacy; // Capture current selection
+            const defaultPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+            // Check if current selection is valid for unrestricted user after setting state
+            if ((allowed.length > 0 && !allowed.includes(currentSelection)) || (allowed.length === 0 && loggedInUsername)) {
+                 console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultPharmacy}`);
+                 setSelectedPharmacy(defaultPharmacy);
+            } else {
+                 console.log(`Keeping valid pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+            }
+          }
+          // --- End UPDATED ---
+
+        } else {
+          // User is not logged in
+          console.log("Auth Check Response: Not Logged In");
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setAllowedPharmacies([]); // Clear restrictions on logout
+          setIsRestrictedUser(false);
+          // Optionally reset pharmacy selection on logout?
+          // setSelectedPharmacy(PHARMACY_OPTIONS[0].value);
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+        setIsLoggedIn(false); // Assume not logged in on error
+        setCurrentUser(null);
+        setAllowedPharmacies([]); // Clear restrictions on error
+        setIsRestrictedUser(false);
+      })
+      .finally(() => {
+        setIsLoadingAuth(false); // Finished loading auth status
+      });
+  // Dependency array is empty: run only once on mount
+  }, []);
+
+  // --- Login/Logout Handlers ---
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
+    setLoginError(''); // Clear previous errors
+    setIsLoadingAuth(true); // Show loading indicator during login process
+    try {
+      const loginResponse = await axios.post('/api/login', { 
+          username: loginUsername, 
+          password: loginPassword 
+      });
+
+      if (loginResponse.status === 200) {
+        // Login successful, now immediately fetch auth details
+        console.log("Login POST successful. Fetching auth details...");
+        try {
+          const authResponse = await axios.get('/api/check_auth');
+          console.log("Auth Check Response (after login):", authResponse.data);
+
+          if (authResponse.data && authResponse.data.isLoggedIn) {
+            const loggedInUsername = authResponse.data.username;
+            const allowed = authResponse.data.allowed_pharmacies || [];
+            
+            // Set all states together AFTER getting auth info
+            setAllowedPharmacies(allowed);
+            setCurrentUser(loggedInUsername);
+            
+            // Determine restriction and set related state
+            let restrictUser = false;
+            let defaultRestrictedPharmacy = null;
+
+            // --- ADJUSTMENT: Only Mauritz/Elani are strictly 'restricted' (dropdown disabled) ---
+            if (loggedInUsername === 'Mauritz' || loggedInUsername === 'Elani') {
+              console.log(`User ${loggedInUsername} identified as strictly restricted (dropdown disabled).`);
+              restrictUser = true;
+              if (allowed.length === 1 && allowed[0] === 'villiers') {
+                 defaultRestrictedPharmacy = 'villiers';
+              } else {
+                 console.warn(`Mauritz/Elani allowed list != ['villiers']:`, allowed);
+                 defaultRestrictedPharmacy = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value; // Fallback
+              }
+            } else {
+              // Lize, Charl, Anmarie, etc. are not strictly restricted (dropdown enabled)
+              console.log(`User ${loggedInUsername} identified as not strictly restricted (dropdown enabled).`);
+              restrictUser = false;
+            }
+            // --- End ADJUSTMENT ---
+
+            // Set restriction state (only true for Mauritz/Elani now)
+            setIsRestrictedUser(restrictUser);
+
+            // Set selected pharmacy based on restriction
+            if (restrictUser) {
+                console.log(`Setting pharmacy to ${defaultRestrictedPharmacy} for restricted user ${loggedInUsername}.`);
+                setSelectedPharmacy(defaultRestrictedPharmacy);
+            } else {
+                 // Ensure selected pharmacy is valid for unrestricted user
+                 const currentSelection = selectedPharmacy; // Capture current selection
+                 const defaultUnrestricted = allowed.length > 0 ? allowed[0] : PHARMACY_OPTIONS[0].value;
+                 if (!allowed.includes(currentSelection) && allowed.length > 0) { // Check allowed length > 0
+                    console.log(`Current selection ${currentSelection} invalid for unrestricted user ${loggedInUsername}. Resetting to default: ${defaultUnrestricted}`);
+                    setSelectedPharmacy(defaultUnrestricted);
+                 } else {
+                     console.log(`Keeping pharmacy ${currentSelection} for unrestricted user ${loggedInUsername}`);
+                 }
+            }
+
+            // Finally, set loggedIn and clear form
+            setIsLoggedIn(true); 
+            setLoginUsername('');
+            setLoginPassword('');
+
+          } else {
+             // This case should ideally not happen if login succeeded, but handle it defensively
+             console.error("Login succeeded but check_auth failed or reported not logged in.");
+             setLoginError('Login verification failed. Please try again.');
+             setIsLoggedIn(false);
+             setCurrentUser(null);
+             setAllowedPharmacies([]);
+             setIsRestrictedUser(false);
+          }
+        } catch (authError) {
+           console.error("Failed to fetch auth details after login:", authError);
+           setLoginError('Login verification failed. Please try again.');
+           setIsLoggedIn(false);
+           setCurrentUser(null);
+           setAllowedPharmacies([]);
+           setIsRestrictedUser(false);
+        }
+      } 
+      // No explicit else needed for loginResponse.status != 200, as axios throws for non-2xx
+
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      setAllowedPharmacies([]); // Clear restrictions on login fail
+      setIsRestrictedUser(false);
+      if (error.response && error.response.data && error.response.data.error) {
+        setLoginError(error.response.data.error);
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    } finally {
+        setIsLoadingAuth(false); // Hide loading indicator
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+      setIsLoggedIn(false);
+      setCurrentUser(null);
+      // Reset view or other state if needed
+      setView('dashboard'); 
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Handle logout error if needed (e.g., show message)
+    }
+  };
+
+  // --- Existing Helper Functions & Data Preparation ---
+  // ... (formatCurrency, donut data, rolling window helpers, etc.)
+
+  // --- Conditional Rendering --- 
+
+  // Show loading indicator while checking auth status
+  if (isLoadingAuth) {
+    return <div className="loading-container">Checking authentication...</div>; 
+  }
+
+  if (!isLoggedIn) {
+    // --- Render TLC Brand Login Card with image background ---
+    return (
+      <div className="session">
+        <div className="login-center-wrapper">
+          <form className="log-in" autoComplete="off" onSubmit={e => { e.preventDefault(); handleLoginSubmit(e); }}>
+            <div className="login-welcome">
+              <div className="login-title-main">Welcome back</div>
+              <div className="login-title-sub">Login to view the dashboard</div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="username">Username:</label>
+              <input 
+                placeholder="Username" 
+                type="text" 
+                name="username" 
+                id="username" 
+                autoComplete="off"
+                value={loginUsername}
+                onChange={e => setLoginUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input 
+                placeholder="Password" 
+                type="password" 
+                name="password" 
+                id="password" 
+                autoComplete="off"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                required
+              />
+            </div>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="button login-button">Log in</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Render Main Dashboard (Only if logged in) --- 
+  return (
+    <div className="dashboard-container">
+      <div className="rotate-overlay">Please rotate your device to landscape to use the dashboard.</div>
+      {/* --- Custom Alert Box --- */}
+      {alertInfo.isVisible && (
+        <div className={`custom-alert alert-${alertInfo.type}`}> 
+          {alertInfo.message}
+          <button 
+            className="alert-close-button" 
+            onClick={() => setAlertInfo({ ...alertInfo, isVisible: false })}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+      {/* --- End Custom Alert Box --- */}
+
+      <header className="dashboard-header">
+         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+           {/* ... logo and title ... */}
+           <img 
+            src="/the-local-choice-logo.png" 
+            alt="TLC Logo" 
+            style={{ height: '60px' }}
+          />
+          {/* Find the label for the selected pharmacy */}
+          <h2 style={{ marginTop: '1.2rem' }}>{selectedPharmacyLabel}</h2>
+         </div>
+         {/* Hamburger icon for mobile */}
+         <button
+           className="hamburger-menu-btn"
+           aria-label="Open navigation menu"
+           onClick={() => setMobileNavOpen(v => !v)}
+         >
+           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="14" width="32" height="3.5" rx="1.75" fill="#fff"/>
+             <rect y="21" width="32" height="3.5" rx="1.75" fill="#fff"/>
+           </svg>
+         </button>
+         {/* Navigation: normal on desktop, overlay on mobile if open */}
+         <nav className={`dashboard-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
+           {/* ... existing nav content ... */}
+           <select
+              value={selectedPharmacy}
+              onChange={e => setSelectedPharmacy(e.target.value)}
+              disabled={isRestrictedUser}
+              style={{
+                marginRight: '0.75rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                background: '#232b3b',
+                color: '#fff',
+                border: '1px solid #374151',
+                cursor: isRestrictedUser ? 'not-allowed' : 'pointer',
+                opacity: isRestrictedUser ? 0.6 : 1
+              }}
+            >
+              {(allowedPharmacies.length > 0
+                ? PHARMACY_OPTIONS.filter(opt => allowedPharmacies.includes(opt.value))
+                : PHARMACY_OPTIONS
+              ).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+                onClick={() => { setView('dashboard'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'dashboard' ? 'active' : ''}`}>
+                Dashboard 
+            </button>
+            <button
+                onClick={() => { setView('monthly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'monthly' ? 'active' : ''}`}>
+                Monthly
+            </button>
+            <button
+                onClick={() => { setView('yearly'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'yearly' ? 'active' : ''}`}>
+                Yearly
+            </button>
+            <button
+                onClick={() => { setView('stock'); setMobileNavOpen(false); }}
+                className={`button button-primary ${view === 'stock' ? 'active' : ''}`}>
+                Stock
+            </button>
+            <div className="update-button-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={handleUpdateClick}
+                className="button button-update" 
+              >
+                Update
+              </button>
+              <button
+                onClick={handleLogout}
+                className="button button-primary button-logout" 
+              >
+                Logout ({currentUser})
+              </button>
+            </div>
+         </nav>
+         {/* Mobile nav overlay background */}
+         {mobileNavOpen && <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}></div>}
+      </header>
+
+      {/* NEW: Status Text Positioned Below Header */}
+      <div style={{ width: '100%', textAlign: 'right', marginTop: '-8px' }}> {/* Increased negative marginTop */}
+        <span className="update-status-text">
+          Updated to: {latestDataDate}
+        </span>
+      </div>
+
+      {/* --- NEW: Dashboard View Section --- */}
+      {view === 'dashboard' && (
+        <section className="dashboard-view-section" style={{ padding: 'var(--padding-section-md) 0' }}>
+          {/* Updated Selectors: Year and Month Only */}
+          <div className="month-selector-container" style={{ marginBottom: 'var(--gap-cards)' }}>
+             <div className="year-selector">
+                <label htmlFor="dash-year-select">Year:</label>
+                <select 
+                  id="dash-year-select"
+                  className="input" 
+                  value={selectedYear}
+                  onChange={e => setSelectedYear(parseInt(e.target.value, 10))}
+                >
+                  {[...Array(5)].map((_, i) => {
+                    const yearOption = currentYear - i;
+                    return <option key={yearOption} value={yearOption}>{yearOption}</option>;
+                  }).reverse()}
+                </select>
+             </div>
+             <div className="month-buttons">
+               {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, index) => {
+                 const monthNumber = index + 1;
+                 const isSelectedMonth = month === monthNumber;
+                 return (
+                   <button 
+                     key={monthName}
+                     onClick={() => setMonth(monthNumber)}
+                     className={`button button-month ${isSelectedMonth ? 'active' : ''}`}
+                   >
+                     {monthName}
+                   </button>
+                 );
+               })}
+             </div>
+           </div>
+
+          {/* Updated KPI Row (using dashboardMonthlyAgg) */}
+          <div className="kpis-grid kpis-grid--dashboard">
+            {/* Removed Transactions KPI card */}
+            <div className="kpi-card">
+              <div className="kpi-label">Turnover</div>
+              <div className="kpi-value kpi-value--accent">{formatCurrency(dashboardMonthlyAgg.turnover) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit %</div>
+              <div className="kpi-value">{dashboardMonthlyAgg.turnover ? ((dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) / dashboardMonthlyAgg.turnover * 100).toFixed(1) : '0.0'}%</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Gross Profit Value</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.turnover - dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Cost of Sales</div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.costOfSales) || '-'}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label">Purchases </div>
+              <div className="kpi-value">{formatCurrency(dashboardMonthlyAgg.purchases) || '-'}</div>
+            </div>
+          </div>
+
+          {/* --- Secondary KPI Row (3 cards) --- */}
+          <div className="kpis-grid kpis-grid--dashboard-secondary" style={{ marginBottom: '0.5rem' }}>
+            <div className="kpi-card">
+            <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Transactions Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.transactions != null ? dashboardMonthlyAgg.transactions.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Total Scripts Qty</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.totalScripts != null ? dashboardMonthlyAgg.totalScripts.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '-'}</span>
+              </div>
+            </div>
+            <div className="kpi-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <GaugeChart
+                value={
+                  (typeof dashboardMonthlyAgg.dispensaryTurnover === 'number' && typeof dashboardMonthlyAgg.turnover === 'number' && dashboardMonthlyAgg.turnover > 0)
+                    ? (dashboardMonthlyAgg.dispensaryTurnover / dashboardMonthlyAgg.turnover) * 100
+                    : 0
+                }
+                max={100}
+                color={COLOR_CHARTREUSE}
+                label={"Dispensary %"}
+              />
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-value" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd' }}>Avg Basket Size</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketSizeReported != null ? dashboardMonthlyAgg.avgBasketSizeReported.toLocaleString(undefined, { maximumFractionDigits: 1 }) : '-'}</span>
+                <span style={{ fontSize: '1.1rem', color: '#bdbdbd', marginTop: 6 }}>Avg Basket Value</span>
+                <span style={{ fontWeight: 600, color: 'white', fontSize: '1.7rem' }}>{dashboardMonthlyAgg.avgBasketValueReported != null ? formatCurrency(dashboardMonthlyAgg.avgBasketValueReported) : '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* --- 12-Month Rolling Window Bar Charts Row --- */}
+          <div className="charts-row" style={{ marginTop: 'var(--gap-cards)' }}>
+            {/* Turnover Chart */}
+            <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+              <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Monthly Turnover (Last 12 Months)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                {/* UPDATE: Use dashboardRolling12MonthsData for ComposedChart */}
+                {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+                  <ComposedChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+                    <XAxis 
+                      dataKey="label" 
+                      interval={0} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px', angle: -30, textAnchor: 'end'}} 
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tickFormatter={value => `R${(value/1000000).toFixed(1)}M`} // Format as Millions
+                      width={50} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tick={{ fill: CHART_AXIS_COLOR, fontSize: '10px'}} 
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 'dataMax']}
+                      tickFormatter={value => value ? `R${Math.round(value)}` : ''}
+                      width={60}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: COLOR_ELECTRIC_PURPLE, fontSize: '10px'}}
+                      // label removed
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'transparent' }}
+                      contentStyle={{ 
+                          backgroundColor: getCssVar('--chart-tooltip-bg'), 
+                          borderColor: getCssVar('--border-color'),
+                          borderRadius: '0.375rem'
+                      }}
+                      itemStyle={{ color: getCssVar('--chart-tooltip-text') }}
+                      labelStyle={{ color: CHART_AXIS_COLOR }}
+                      formatter={(value, name) => {
+                        if (name === 'Avg Basket Value') return [formatCurrency(value), 'Avg Basket Value'];
+                        if (name === 'Total Turnover') return [formatCurrency(value), 'Total Turnover'];
+                        return [formatCurrency(value), name];
+                      }}
+                    />
+                    <Bar yAxisId="left" dataKey="total" name="Total Turnover">
+                      {/* UPDATE: Map over dashboardRolling12MonthsData */}
+                      {dashboardRolling12MonthsData.map((entry, idx) => (
+                          <Cell
+                              key={`cell-dash-rolling12-${entry.label}`}
+                              fill={COLOR_COQUELICOT} 
+                              radius={[4, 4, 0, 0]} 
+                  />
+              ))}
+            </Bar>
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="avgBasketValueReported" 
+              name="Avg Basket Value" 
+              stroke={COLOR_WHITE} 
+              strokeWidth={4}
+              dot={false}
+              activeDot={false}
+            />
+            <Legend />
+          </ComposedChart>
+        ) : (
+          <div style={{ color: CHART_AXIS_COLOR, textAlign: 'center', paddingTop: '5rem' }}>Loading chart data...</div>
+        )}
+      </ResponsiveContainer>
+    </div>
+    {/* Cost of Sales Chart (now LineChart) */}
+    <div className="chart-container" style={{ flex: 1, minWidth: 320 }}>
+      <h3 style={{marginBottom: '1rem', color: 'var(--text-secondary)'}}>Cost of Sales & Purchases (Last 12 Months)</h3>
+      <ResponsiveContainer width="100%" height={220}>
+         {/* UPDATE: Use dashboardRolling12MonthsData for LineChart */}
+        {Array.isArray(dashboardRolling12MonthsData) && dashboardRolling12MonthsData.length > 0 ? (
+          <LineChart data={dashboardRolling12MonthsData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_COLOR} />
+            <XAxis 
+              dataKey="label" 
+              interval={0} 
+              tickLine={false} 
+              axisLine={false} 
                        tick={{ fill: CHART_AXIS_COLOR, fontSize: 'var(--text-sm)'}} 
                     />
                     <YAxis 
