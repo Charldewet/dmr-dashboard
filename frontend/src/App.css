@@ -1436,5 +1436,13 @@ html, body {
     font-size: 2rem;
     text-align: center;
     padding: 2rem;
+    gap: 2rem;
+  }
+  .rotate-overlay .rotate-icon {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 1.5rem;
+    display: block;
+    align-self: center;
   }
 }
