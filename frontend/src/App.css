@@ -326,40 +326,36 @@ label {
 /* Layout for Top Row (KPIs + Donut) - This is for MONTHLY and other general top rows */
 .top-row-layout {
   display: flex;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
   gap: var(--gap-cards);
-  margin-bottom: var(--gap-cards); 
-  align-items: center; 
+  margin-bottom: var(--gap-cards);
+  align-items: center;
 }
 
-/* Apply flex sizing similar to yearly top row for consistency */
 .top-row-layout .kpi-grid-container {
-  flex: 3 1 60%; 
-  min-width: 450px; 
+  flex: 3 1 60%;
+  min-width: 450px;
 }
 
 .top-row-layout .donut-chart-container {
-  flex: 2 1 35%; 
-  min-width: 300px; 
-  align-self: center; 
+  flex: 2 1 35%;
+  min-width: 300px;
+  align-self: center;
 }
 
-/* Ensure donut chart container itself doesn't have extra top margin */
-.top-row-layout .donut-chart-container .chart-container {
-    margin-top: 0;
-}
-
-/* Ensure the main kpis grid doesn't have extra top margin */
+.top-row-layout .donut-chart-container .chart-container,
 .top-row-layout .kpi-grid-container .kpis-grid {
-    margin-top: 0;
+  margin-top: 0;
 }
 
-/* Specific grid setup for MONTHLY KPIs - to match YEARLY default */
+/* Specific grid setup for MONTHLY KPIs - FORCED 2 Columns of 3 */
 .kpis-grid--monthly {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Default to 3 columns, like yearly */
+  grid-template-columns: repeat(2, 1fr); /* FORCE 2 columns */
+  grid-auto-rows: 1fr; /* Ensure rows are equal height */
   gap: var(--gap-cards);
-  align-items: stretch; 
+  align-items: stretch;
+  width: 100%;
 }
 
 /* Remove commented out old styles */
@@ -605,42 +601,36 @@ label {
 /* NEW: Top row layout for KPIs + Donut (similar to monthly/daily) */
 .yearly-top-row-container {
   display: flex;
-  flex-wrap: wrap; /* Allow wrapping */
+  flex-wrap: wrap;
   gap: var(--gap-cards);
-  margin-bottom: var(--gap-cards); /* Space below this row before the grid */
-  align-items: center; /* Vertically center items */
+  margin-bottom: var(--gap-cards);
+  align-items: center;
 }
 
-/* Apply flex sizing similar to monthly/daily top row */
 .yearly-top-row-container .kpi-grid-container {
-  flex: 3 1 60%; 
-  min-width: 450px; 
+  flex: 3 1 60%;
+  min-width: 450px;
 }
 
 .yearly-top-row-container .donut-chart-container {
-  flex: 2 1 35%; 
-  min-width: 300px; 
-  align-self: center; 
+  flex: 2 1 35%;
+  min-width: 300px;
+  align-self: center;
 }
 
-/* Ensure donut chart container itself doesn't have extra top margin */
-.yearly-top-row-container .donut-chart-container .chart-container {
-    margin-top: 0;
+.yearly-top-row-container .donut-chart-container .chart-container,
+.yearly-top-row-container .kpi-grid-container .kpis-grid {
+  margin-top: 0;
 }
 
-/* Specific grid setup for the 3 yearly KPIs */
+/* Specific grid setup for the YEARLY KPIs - FORCED 2 Columns of 3 */
 .kpis-grid--yearly {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 equal columns */
+  grid-template-columns: repeat(2, 1fr); /* FORCE 2 columns */
+  grid-auto-rows: 1fr; /* Ensure rows are equal height */
   gap: var(--gap-cards);
   align-items: stretch;
-  /* Remove margin-top if kpi-grid-container handles spacing */
-  /* margin-top: 0; */ 
-}
-
-/* Ensure the main kpis grid inside the container doesn't have extra top margin */
-.yearly-top-row-container .kpi-grid-container .kpis-grid {
-    margin-top: 0;
+  width: 100%;
 }
 
 /* Yearly grid container is now a direct child */
@@ -1251,25 +1241,18 @@ html, body {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
   }
 
-  /* Ensure BOTH monthly and yearly KPIs go to 2 columns here */
-  .kpis-grid--monthly,
-  .kpis-grid--yearly { /* Combined for consistency */
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 1fr; /* Ensure rows are equal height */
-    gap: 1rem; /* Consistent gap */
-    width: 100%;
-  }
+  /* KPI grids are already 2 columns by default. Child card padding might still need adjustment. */
   .kpis-grid--monthly .kpi-card,
   .kpis-grid--yearly .kpi-card {
     min-width: 0;
     padding: 0.75rem 0.5rem; /* Consistent padding */
   }
 
-  .top-row-layout, /* Add .top-row-layout here to ensure it stacks like yearly */
+  /* Stacking of the overall top row container */
+  .top-row-layout, 
   .yearly-top-row-container {
-    flex-direction: column; /* Stack KPI grid and donut chart */
-    align-items: stretch; /* Ensure children take full width */
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .month-selector-container {
@@ -1470,6 +1453,7 @@ html, body {
 }
 
 @media (max-width: 1120px) {
+  /* Stacking of the overall top row container if not already done by 950px */
   .top-row-layout,
   .yearly-top-row-container {
     flex-direction: column;
@@ -1483,16 +1467,7 @@ html, body {
     align-self: stretch;
   }
   
-  /* Ensure BOTH monthly and yearly KPIs go to 2 columns here if not already by 950px query */
-  /* This might be redundant if 950px already handles it, but ensures it for 1120px */
-  .kpis-grid--monthly,
-  .kpis-grid--yearly { /* Combined for consistency */
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: 1fr;
-    gap: 1rem;
-    width: 100%;
-  }
+  /* KPI grids are already 2 columns by default. Child card padding might still need adjustment. */
   .kpis-grid--monthly .kpi-card,
   .kpis-grid--yearly .kpi-card {
     min-width: 0;
