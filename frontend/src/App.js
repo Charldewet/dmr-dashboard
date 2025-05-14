@@ -1494,7 +1494,6 @@ function App() {
            className="hamburger-menu-btn"
            aria-label="Open navigation menu"
            onClick={() => setMobileNavOpen(v => !v)}
-           style={{ display: 'none' }}
          >
            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
              <rect y="7" width="32" height="3.5" rx="1.75" fill="#fff"/>
