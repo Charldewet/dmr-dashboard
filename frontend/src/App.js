@@ -194,6 +194,9 @@ function App() {
   const [allowedPharmacies, setAllowedPharmacies] = useState([]);
   const [isRestrictedUser, setIsRestrictedUser] = useState(false);
 
+  // --- Hamburger menu state for mobile nav ---
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   // --- Existing UI and Data State ---
   const [view, setView] = useState('dashboard');
   const [selectedDate, setSelectedDate] = useState(new Date());
