@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 // Import any needed chart components, etc.
 
-function MonthlyView() {
+function MonthlyView({ selectedPharmacy }) {
   const [turnover, setTurnover] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,7 +10,9 @@ function MonthlyView() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    axios.get('/api/month/2025-05/aggregates')
+    axios.get('/api/month/2025-05/aggregates', {
+      headers: { 'X-Pharmacy': selectedPharmacy }
+    })
       .then(res => {
         setTurnover(res.data?.turnover ?? null);
         setLoading(false);
@@ -19,7 +21,7 @@ function MonthlyView() {
         setError('Error fetching turnover');
         setLoading(false);
       });
-  }, []);
+  }, [selectedPharmacy]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2rem' }}>

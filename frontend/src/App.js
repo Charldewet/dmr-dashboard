@@ -55,7 +55,7 @@ function App() {
               background: 'none',
               border: 'none',
               color: '#fff',
-              fontSize: '1.2rem',
+              fontSize: '1.4rem',
               fontWeight: 600,
               letterSpacing: '0.01em',
               display: 'flex',
@@ -136,7 +136,7 @@ function App() {
         </button>
       </div>
       {view === 'daily' && <DailyView />}
-      {view === 'monthly' && <MonthlyView />}
+      {view === 'monthly' && <MonthlyView selectedPharmacy={selectedPharmacy} />}
       {view === 'yearly' && <YearlyView />}
       {view === 'stock' && <StockView />}
     </div>
